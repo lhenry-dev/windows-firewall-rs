@@ -1,0 +1,33 @@
+[package]
+name = "windows_firewall_rs"
+authors = ["lhenry-dev"]
+version = "1.0.0"
+edition = "2024"
+description = "A Rust crate for managing Windows Firewall rules and settings."
+license = "MIT/Apache-2.0"
+keywords = ["windows", "ffi", "win32", "com", "firewall"]
+categories = ["external-ffi-bindings", "os::windows-apis"]
+readme = "README.md"
+repository = "https://github.com/lhenry-dev/Windows-Firewall-rs"
+
+[package.metadata.docs.rs]
+default-target = "x86_64-pc-windows-msvc"
+targets = ["aarch64-pc-windows-msvc", "i686-pc-windows-msvc", "x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc"]
+
+[dependencies]
+scopeguard = "1.2"
+thiserror = "2.0"
+tracing = "0.1"
+typed-builder = "0.21"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+    "Win32_System_Com",
+    "Win32_NetworkManagement_WindowsFirewall",
+    "Win32_System_Ole",
+    "Win32_System_Variant",
+] }
+windows-result = "0.3.0"
+
+[dev-dependencies]
+serial_test = "3.2.0"
