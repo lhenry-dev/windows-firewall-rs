@@ -1,10 +1,23 @@
-# Windows Firewall Rs
+<h1 align="center">Windows Firewall Rs</h1>
 
-[![Crates.io](https://img.shields.io/crates/v/windows_firewall_rs)](https://crates.io/crates/windows_firewall_rs)
-[![Documentation](https://docs.rs/windows_firewall_rs/badge.svg)](https://docs.rs/windows_firewall_rs)
-[![License](https://img.shields.io/crates/l/windows_firewall_rs)](https://crates.io/crates/windows_firewall_rs)
+<p align="center">
+  <a href="https://crates.io/crates/windows_firewall_rs">
+    <img src="https://img.shields.io/crates/v/windows_firewall_rs" alt="Crates.io">
+  </a>
+  <a href="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs">
+    <img src="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs/status.svg" alt="dependency status">
+  </a>
+  <a href="https://docs.rs/windows_firewall_rs">
+    <img src="https://docs.rs/windows_firewall_rs/badge.svg" alt="Documentation">
+  </a>
+  <a href="https://crates.io/crates/windows_firewall_rs">
+    <img src="https://img.shields.io/crates/l/windows_firewall_rs" alt="License">
+  </a>
+</p>
 
-A Rust crate for managing Windows Firewall rules and settings using the Windows API in Rust.
+<p align="center">
+  A Rust crate for managing Windows Firewall rules and settings using the Windows API in Rust.
+</p>
 
 ## Features
 
