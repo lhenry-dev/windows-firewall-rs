@@ -39,7 +39,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [target.'cfg(windows)'.dependencies]
-windows_firewall_rs = "1.0.0"
+windows_firewall = "1.0.0"
 ```
 
 ## Usage Examples
@@ -47,8 +47,8 @@ windows_firewall_rs = "1.0.0"
 ### Creating and Managing Rules
 
 ```rust
-use windows_firewall_rs::{
-    add_rule, remove_rule, rule_exist, update_rule, WindowsFirewallRule, WindowsFirewallRuleSettings,
+use windows_firewall::{
+    add_rule, remove_rule, rule_exists, update_rule, WindowsFirewallRule, WindowsFirewallRuleSettings,
     ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows
 };
 
@@ -70,7 +70,7 @@ match add_rule(rule.clone()) {
 };
 
 // Verify the rule exists
-match rule_exist("TestHTTPRule") {
+match rule_exists("TestHTTPRule") {
     Ok(exists) => println!("Rule exists: {}", exists),
     Err(e) => eprintln!("Failed to check rule: {}", e),
 };
@@ -96,9 +96,9 @@ match remove_rule("TestHTTPRule") {
 ### Another example of using struct methods
 
 ```rust
-use windows_firewall_rs::{
+use windows_firewall::{
     WindowsFirewallRule, WindowsFirewallRuleSettings,
-    ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows,rule_exist
+    ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows
 };
 
 // Create a new firewall rule
@@ -119,7 +119,7 @@ match rule.add() {
 };
 
 // Verify the rule exists
-match rule_exist("TestDNSServerRule") {
+match rule.exists() {
     Ok(exists) => println!("Rule exists: {}", exists),
     Err(e) => eprintln!("Failed to check rule: {}", e),
 };
@@ -145,7 +145,7 @@ match rule.remove() {
 ### Checking Firewall Status
 
 ```rust
-use windows_firewall_rs::{get_firewall_state, ProfileFirewallWindows};
+use windows_firewall::{get_firewall_state, ProfileFirewallWindows};
 
 match get_firewall_state(ProfileFirewallWindows::Current) {
     Ok(enabled) => println!("Firewall is {}", if enabled { "enabled" } else { "disabled" }),
@@ -156,7 +156,7 @@ match get_firewall_state(ProfileFirewallWindows::Current) {
 ### Listing Firewall Rules
 
 ```rust
-use windows_firewall_rs::list_rules;
+use windows_firewall::list_rules;
 
 match list_rules() {
     Ok(rules) => {
@@ -206,7 +206,7 @@ match list_rules() {
 
 For issues and questions:
 - Open an issue on GitHub
-- Check the [documentation](https://docs.rs/windows_firewall_rs)
+- Check the [documentation](https://docs.rs/windows_firewall)
 
 
 # License

@@ -17,7 +17,7 @@ use crate::utils::{
     convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, to_string_hashset_option,
     variant_to_hashset,
 };
-use crate::windows_firewall::{remove_rule, update_rule};
+use crate::windows_firewall::{remove_rule, rule_exists, update_rule};
 use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, disable_rule, enable_rule};
 
 /// Represents a rule in the Windows Firewall.
@@ -46,7 +46,7 @@ use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, disable_rule, enab
 ///
 /// # Example
 /// ```rust
-/// use windows_firewall_rs::{WindowsFirewallRule, ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows};
+/// use windows_firewall::{WindowsFirewallRule, ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows};
 ///
 /// let rule = WindowsFirewallRule::builder()
 /// .name("Allow HTTP")
@@ -450,6 +450,33 @@ impl WindowsFirewallRule {
         }
         Ok(())
     }
+
+    /// Checks if a firewall rule with the given name exists.
+    ///
+    /// This function initializes COM, creates a firewall policy object, and checks if a rule
+    /// with the specified name exists in the Windows Firewall rules list.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's `name` field.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a `Result<bool, WindowsFirewallError>`. If the rule exists, it returns `Ok(true)`,
+    /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
+    /// with firewall policy), it returns a `WindowsFirewallError`.
+    ///
+    /// # Errors
+    ///
+    /// This function may return a `WindowsFirewallError` in case of failures during COM initialization
+    /// or while interacting with the firewall policy object.
+    ///
+    /// # Security
+    ///
+    /// This function does not require administrative privileges.
+    pub fn exists(&self) -> Result<bool, WindowsFirewallError> {
+        rule_exists(&self.name)
+    }
 }
 
 impl TryFrom<INetFwRule> for WindowsFirewallRule {
@@ -588,7 +615,7 @@ impl TryFrom<WindowsFirewallRule> for INetFwRule {
 ///
 /// # Example
 /// ```rust
-/// use windows_firewall_rs::{WindowsFirewallRuleSettings, DirectionFirewallWindows, ActionFirewallWindows, ProtocolFirewallWindows};
+/// use windows_firewall::{WindowsFirewallRuleSettings, DirectionFirewallWindows, ActionFirewallWindows, ProtocolFirewallWindows};
 ///
 /// let rule_settings = WindowsFirewallRuleSettings::builder()
 ///     .name("Allow HTTP")

@@ -40,7 +40,7 @@ use crate::{DirectionFirewallWindows, ProtocolFirewallWindows};
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn rule_exist(name: &str) -> Result<bool, WindowsFirewallError> {
+pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
     unsafe {
         let hr_com_init = CoInitializeEx(None, DWCOINIT);
         if hr_com_init.is_err() {
@@ -181,7 +181,7 @@ pub fn add_rule(rule: WindowsFirewallRule) -> Result<(), WindowsFirewallError> {
 pub fn add_rule_if_not_exists(rule: WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
     let rule_name = rule.name();
 
-    if rule_exist(rule_name)? {
+    if rule_exists(rule_name)? {
         Ok(false)
     } else {
         add_rule(rule)?;
