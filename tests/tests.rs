@@ -4,16 +4,16 @@ use std::collections::HashSet;
 use std::net::IpAddr;
 use std::str::FromStr;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
-use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
+use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
+use windows_firewall::{
+    add_rule, get_active_profile, get_firewall_state, get_rule, list_incoming_rules,
+    list_outgoing_rules, list_rules, remove_rule, rule_exists, update_rule,
+};
 use windows_firewall::{
     ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes::Lan, InterfaceTypes::Wireless,
     ProfileFirewallWindows, ProtocolFirewallWindows,
 };
 use windows_firewall::{WindowsFirewallRule, WindowsFirewallRuleSettings};
-use windows_firewall::{
-    add_rule, get_active_profile, get_firewall_state, get_rule, list_incoming_rules,
-    list_outgoing_rules, list_rules, remove_rule, rule_exists, update_rule,
-};
 
 const RULE_NAME: &str = "aaaWindowsFirewallRsTestRule";
 

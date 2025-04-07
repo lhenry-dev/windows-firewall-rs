@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
 use typed_builder::TypedBuilder;
+use windows::core::BSTR;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
 use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize};
-use windows::core::BSTR;
 
 use crate::constants::{DWCLSCONTEXT, DWCOINIT};
 use crate::errors::WindowsFirewallError;
@@ -18,7 +18,7 @@ use crate::utils::{
     variant_to_hashset,
 };
 use crate::windows_firewall::{remove_rule, rule_exists, update_rule};
-use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, disable_rule, enable_rule};
+use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, InterfaceTypes};
 
 /// Represents a rule in the Windows Firewall.
 ///

@@ -2,13 +2,13 @@ use scopeguard::guard;
 use std::convert::TryFrom;
 use std::mem::ManuallyDrop;
 use tracing::error;
+use windows::core::{Interface, BSTR};
 use windows::Win32::NetworkManagement::WindowsFirewall::{
-    INetFwPolicy2, INetFwRule, INetFwRules, NET_FW_PROFILE_TYPE2, NetFwPolicy2,
+    INetFwPolicy2, INetFwRule, INetFwRules, NetFwPolicy2, NET_FW_PROFILE_TYPE2,
 };
 use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize};
 use windows::Win32::System::Ole::IEnumVARIANT;
 use windows::Win32::System::Variant::VARIANT;
-use windows::core::{BSTR, Interface};
 
 use crate::constants::{DWCLSCONTEXT, DWCOINIT};
 use crate::errors::WindowsFirewallError;
