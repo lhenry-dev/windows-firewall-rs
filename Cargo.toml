@@ -2,7 +2,8 @@
 name = "windows_firewall"
 authors = ["lhenry-dev"]
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+rust-version = "1.78"
 description = "A crate for managing Windows Firewall rules and settings."
 license = "MIT/Apache-2.0"
 keywords = ["windows", "ffi", "win32", "com", "firewall"]
