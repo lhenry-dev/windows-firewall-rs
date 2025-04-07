@@ -1,10 +1,10 @@
 use std::{collections::HashSet, ffi::OsStr, str::FromStr};
 use windows::{
+    core::{BSTR, PWSTR},
     Win32::System::{
         Ole::{SafeArrayCreateVector, SafeArrayPutElement},
-        Variant::{self, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT, VariantToStringAlloc},
+        Variant::{self, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT},
     },
-    core::{BSTR, PWSTR},
 };
 
 pub(crate) fn to_string_hashset_option<T, I>(items: I) -> Option<HashSet<String>>

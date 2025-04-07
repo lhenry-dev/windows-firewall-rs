@@ -1,14 +1,15 @@
 [package]
-name = "windows_firewall_rs"
+name = "windows_firewall"
 authors = ["lhenry-dev"]
-version = "1.0.0"
-edition = "2024"
-description = "A Rust crate for managing Windows Firewall rules and settings."
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78"
+description = "A crate for managing Windows Firewall rules and settings."
 license = "MIT/Apache-2.0"
 keywords = ["windows", "ffi", "win32", "com", "firewall"]
 categories = ["external-ffi-bindings", "os::windows-apis"]
 readme = "README.md"
-repository = "https://github.com/lhenry-dev/Windows-Firewall-rs"
+repository = "https://github.com/lhenry-dev/windows-firewall-rs"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
