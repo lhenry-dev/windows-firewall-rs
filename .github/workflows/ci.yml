@@ -70,7 +70,7 @@ jobs:
       - name: Install tool
         run: cargo install cargo-machete
       - name: Run cargo machete
-        run: cargo machete --check
+        run: cargo machete
 
   sort:
     runs-on: windows-latest
