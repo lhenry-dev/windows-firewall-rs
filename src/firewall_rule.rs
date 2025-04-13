@@ -374,7 +374,7 @@ impl WindowsFirewallRule {
     ///
     /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule exists, it returns `Ok(true)`,
     /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
-    /// with firewall policy), it returns a [`WindowsFirewallError`](WindowsFirewallError).
+    /// with firewall policy), it returns a [`WindowsFirewallError`].
     ///
     /// # Errors
     ///
