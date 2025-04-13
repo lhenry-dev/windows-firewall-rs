@@ -23,26 +23,26 @@ use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, Interfa
 /// Represents a rule in the Windows Firewall.
 ///
 /// # Mandatory Fields
-/// - `name`: The friendly name of the rule. (must not contain "|" and must not be "all")
-/// - `direction`: The direction of the traffic (e.g., inbound or outbound).
-/// - `enabled`: Whether the rule is enabled or disabled.
-/// - `action`: The action of the rule (e.g., allow or block traffic).
+/// - [`name`](WindowsFirewallRule::name): The friendly name of the rule. *(Must not contain `|` or be `"all"`)*
+/// - [`direction`](WindowsFirewallRule::direction): The direction of the traffic (e.g., `Inbound`, `Outbound`).
+/// - [`enabled`](WindowsFirewallRule::enabled): Whether the rule is enabled.
+/// - [`action`](WindowsFirewallRule::action): The action taken (e.g., `Allow`, `Block`).
 ///
 /// # Optional Fields
-/// - `description`: A description of the rule. (must not contain "|")
-/// - `application_name`: The friendly name of the application.
-/// - `service_name`: The service name property of the application.
-/// - `protocol`: The IP protocol for the rule (e.g., TCP/UDP).
-/// - `local_ports`: A list of local ports for the rule.
-/// - `remote_ports`: A list of remote ports for the rule.
-/// - `local_addresses`: A list of local addresses for the rule.
-/// - `remote_addresses`: A list of remote addresses for the rule.
-/// - `icmp_types_and_codes`: A list of ICMP types and codes.
-/// - `interfaces`: A list of interfaces to which the rule applies.
-/// - `interface_types`: A list of interface types to which the rule applies.
-/// - `grouping`: The group to which the rule belongs.
-/// - `profiles`: Profiles to which the rule belongs.
-/// - `edge_traversal`: Whether edge traversal is enabled or disabled (default: `false`).
+/// - [`description`](WindowsFirewallRule::description): Description of the rule. *(Must not contain `|`)*
+/// - [`application_name`](WindowsFirewallRule::application_name): Friendly app name.
+/// - [`service_name`](WindowsFirewallRule::service_name): Service name of the app.
+/// - [`protocol`](WindowsFirewallRule::protocol): IP protocol (e.g., [`ProtocolFirewallWindows::Tcp`]).
+/// - [`local_ports`](WindowsFirewallRule::local_ports): Local ports list.
+/// - [`remote_ports`](WindowsFirewallRule::remote_ports): Remote ports list.
+/// - [`local_addresses`](WindowsFirewallRule::local_addresses): Local addresses.
+/// - [`remote_addresses`](WindowsFirewallRule::remote_addresses): Remote addresses.
+/// - [`icmp_types_and_codes`](WindowsFirewallRule::icmp_types_and_codes): ICMP types & codes.
+/// - [`interfaces`](WindowsFirewallRule::interfaces): Interfaces targeted by the rule.
+/// - [`interface_types`](WindowsFirewallRule::interface_types): Types of interfaces targeted.
+/// - [`grouping`](WindowsFirewallRule::grouping): Group this rule belongs to.
+/// - [`profiles`](WindowsFirewallRule::profiles): Profiles this rule applies to.
+/// - [`edge_traversal`](WindowsFirewallRule::edge_traversal): Enables edge traversal (default: `false`).
 ///
 /// # Example
 /// ```rust
@@ -136,6 +136,258 @@ pub struct WindowsFirewallRule {
 }
 
 impl WindowsFirewallRule {
+    /// Adds a new firewall rule to the system.
+    ///
+    /// This function creates and adds a new firewall rule based on the current instance's properties.
+    /// The rule is registered with the Windows Firewall, applying the specified settings such as
+    /// name, direction, action, and other parameters.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's fields.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
+    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure or failure to add rule),
+    /// it returns a [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Adding the firewall rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn add(&self) -> Result<(), WindowsFirewallError> {
+        add_rule(self.clone())?;
+        Ok(())
+    }
+
+    /// Adds a new firewall rule to the system only if a rule with the same name doesn't exist.
+    ///
+    /// This function first checks if a rule with the given name exists, and if not,
+    /// adds the new rule to the Windows Firewall.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's fields.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
+    /// it returns `Ok(true)`. If the rule already exists, it returns `Ok(false)`. In case of an error
+    /// (e.g., COM initialization failure or failure to add rule), it returns a [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Checking if the rule exists.
+    /// - Adding the firewall rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn add_if_not_exists(&self) -> Result<(), WindowsFirewallError> {
+        add_rule_if_not_exists(self.clone())?;
+        Ok(())
+    }
+
+    /// Deletes an existing firewall rule from the system.
+    ///
+    /// This function removes a firewall rule identified by its name. Once deleted, the rule
+    /// can no longer be applied, and any associated settings are lost.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's [`name`](WindowsFirewallRule::name) field.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is removed successfully,
+    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found),
+    /// it returns a [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Removing the rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn remove(self) -> Result<(), WindowsFirewallError> {
+        remove_rule(&self.name)?;
+        Ok(())
+    }
+
+    /// Updates an existing firewall rule with new settings.
+    ///
+    /// This function modifies an existing firewall rule based on the provided [`settings`](WindowsFirewallRuleSettings).
+    /// It updates various properties such as name, direction, action, protocol, and addresses.
+    /// If the protocol is ICMP (IPv4 or IPv6), the function ensures that local and remote ports
+    /// are cleared, as they are not applicable to ICMP.
+    ///
+    /// # Arguments
+    ///
+    /// * `settings` - A reference to a [`WindowsFirewallRuleSettings`] struct containing the new
+    ///   configuration parameters for the firewall rule.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
+    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found, or failure
+    /// to update the rule), it returns a [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Fetching the rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn update(
+        &mut self,
+        settings: &WindowsFirewallRuleSettings,
+    ) -> Result<(), WindowsFirewallError> {
+        update_rule(&self.name, settings.clone())?;
+
+        let is_icmp = matches!(
+            &settings.protocol,
+            Some(ProtocolFirewallWindows::Icmpv4) | Some(ProtocolFirewallWindows::Icmpv6)
+        );
+
+        if let Some(name) = &settings.name {
+            self.name = name.to_string();
+        }
+        if let Some(direction) = &settings.direction {
+            self.direction = *direction;
+        }
+        if let Some(enabled) = settings.enabled {
+            self.enabled = enabled;
+        }
+        if let Some(action) = &settings.action {
+            self.action = *action;
+        }
+        if let Some(description) = &settings.description {
+            self.description = Some(description.to_string());
+        }
+        if let Some(application_name) = &settings.application_name {
+            self.application_name = Some(application_name.to_string());
+        }
+        if let Some(service_name) = &settings.service_name {
+            self.service_name = Some(service_name.to_string());
+        }
+        if let Some(protocol) = &settings.protocol {
+            if is_icmp {
+                self.local_ports = None;
+                self.remote_ports = None;
+            }
+            self.protocol = Some(*protocol);
+        }
+        if let Some(local_ports) = &settings.local_ports {
+            self.local_ports = Some(local_ports.clone());
+        }
+        if let Some(remote_ports) = &settings.remote_ports {
+            self.remote_ports = Some(remote_ports.clone());
+        }
+        if let Some(local_addresses) = &settings.local_addresses {
+            self.local_addresses = Some(local_addresses.clone());
+        }
+        if let Some(remote_addresses) = &settings.remote_addresses {
+            self.remote_addresses = Some(remote_addresses.clone());
+        }
+        if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
+            self.icmp_types_and_codes = Some(icmp_types_and_codes.to_string());
+        }
+        if let Some(interfaces) = &settings.interfaces {
+            self.interfaces = Some(interfaces.clone());
+        }
+        if let Some(interface_types) = &settings.interface_types {
+            self.interface_types = Some(interface_types.clone());
+        }
+        if let Some(grouping) = &settings.grouping {
+            self.grouping = Some(grouping.to_string());
+        }
+        if let Some(profiles) = &settings.profiles {
+            self.profiles = Some(*profiles);
+        }
+        if let Some(edge_traversal) = &settings.edge_traversal {
+            self.edge_traversal = Some(*edge_traversal);
+        }
+        Ok(())
+    }
+
+    /// Enables or disables an existing firewall rule.
+    ///
+    /// This function modifies the state of a firewall rule based on the `disable` parameter.
+    /// If `disable` is `true`, the rule is disabled; otherwise, it is enabled. The function
+    /// updates the `enabled` field accordingly.
+    ///
+    /// # Arguments
+    ///
+    /// * `disable` - A boolean indicating whether to disable (`true`) or enable (`false`) the rule.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is enabled successfully,
+    /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
+    /// it returns a [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Fetching the rule.
+    /// - Enabling the rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn disable(&mut self, disable: bool) -> Result<(), WindowsFirewallError> {
+        if disable {
+            disable_rule(&self.name)?;
+            self.enabled = false;
+        } else {
+            enable_rule(&self.name)?;
+            self.enabled = true;
+        }
+        Ok(())
+    }
+
+    /// Checks if a firewall rule with the given name exists.
+    ///
+    /// This function initializes COM, creates a firewall policy object, and checks if a rule
+    /// with the specified name exists in the Windows Firewall rules list.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's [`name`](WindowsFirewallRule::name) field.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule exists, it returns `Ok(true)`,
+    /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
+    /// with firewall policy), it returns a [`WindowsFirewallError`](WindowsFirewallError).
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] in case of failures during COM initialization
+    /// or while interacting with the firewall policy object.
+    ///
+    /// # Security
+    ///
+    /// This function does not require administrative privileges.
+    pub fn exists(&self) -> Result<bool, WindowsFirewallError> {
+        rule_exists(&self.name)
+    }
+
     /// Returns the name of the firewall rule
     pub fn name(&self) -> &str {
         &self.name
@@ -224,258 +476,6 @@ impl WindowsFirewallRule {
     /// Returns whether edge traversal is allowed by the rule
     pub fn edge_traversal(&self) -> Option<bool> {
         self.edge_traversal
-    }
-
-    /// Adds a new firewall rule to the system.
-    ///
-    /// This function creates and adds a new firewall rule based on the current instance's properties.
-    /// The rule is registered with the Windows Firewall, applying the specified settings such as
-    /// name, direction, action, and other parameters.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's fields.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<(), WindowsFirewallError>`. If the rule is added successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure or failure to add rule),
-    /// it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` if there is a failure during:
-    /// - COM initialization (`CoInitializeExFailed`).
-    /// - Adding the firewall rule.
-    ///
-    /// # Security
-    ///
-    /// This function requires administrative privileges.
-    pub fn add(&self) -> Result<(), WindowsFirewallError> {
-        add_rule(self.clone())?;
-        Ok(())
-    }
-
-    /// Adds a new firewall rule to the system only if a rule with the same name doesn't exist.
-    ///
-    /// This function first checks if a rule with the given name exists, and if not,
-    /// adds the new rule to the Windows Firewall.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's fields.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<bool, WindowsFirewallError>`. If the rule is added successfully,
-    /// it returns `Ok(true)`. If the rule already exists, it returns `Ok(false)`. In case of an error
-    /// (e.g., COM initialization failure or failure to add rule), it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` if there is a failure during:
-    /// - COM initialization (`CoInitializeExFailed`).
-    /// - Checking if the rule exists.
-    /// - Adding the firewall rule.
-    ///
-    /// # Security
-    ///
-    /// This function requires administrative privileges.
-    pub fn add_if_not_exists(&self) -> Result<(), WindowsFirewallError> {
-        add_rule_if_not_exists(self.clone())?;
-        Ok(())
-    }
-
-    /// Deletes an existing firewall rule from the system.
-    ///
-    /// This function removes a firewall rule identified by its name. Once deleted, the rule
-    /// can no longer be applied, and any associated settings are lost.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's `name` field.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<(), WindowsFirewallError>`. If the rule is removed successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found),
-    /// it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` if there is a failure during:
-    /// - COM initialization (`CoInitializeExFailed`).
-    /// - Removing the rule.
-    ///
-    /// # Security
-    ///
-    /// This function requires administrative privileges.
-    pub fn remove(self) -> Result<(), WindowsFirewallError> {
-        remove_rule(&self.name)?;
-        Ok(())
-    }
-
-    /// Updates an existing firewall rule with new settings.
-    ///
-    /// This function modifies an existing firewall rule based on the provided `settings`.
-    /// It updates various properties such as name, direction, action, protocol, and addresses.
-    /// If the protocol is ICMP (IPv4 or IPv6), the function ensures that local and remote ports
-    /// are cleared, as they are not applicable to ICMP.
-    ///
-    /// # Arguments
-    ///
-    /// * `settings` - A reference to a `WindowsFirewallRuleSettings` struct containing the new
-    ///   configuration parameters for the firewall rule.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<(), WindowsFirewallError>`. If the rule is updated successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found, or failure
-    /// to update the rule), it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` if there is a failure during:
-    /// - COM initialization (`CoInitializeExFailed`).
-    /// - Fetching the rule.
-    ///
-    /// # Security
-    ///
-    /// This function requires administrative privileges.
-    pub fn update(
-        &mut self,
-        settings: &WindowsFirewallRuleSettings,
-    ) -> Result<(), WindowsFirewallError> {
-        update_rule(&self.name, settings.clone())?;
-
-        let is_icmp = matches!(
-            &settings.protocol,
-            Some(ProtocolFirewallWindows::Icmpv4) | Some(ProtocolFirewallWindows::Icmpv6)
-        );
-
-        if let Some(name) = &settings.name {
-            self.name = name.to_string();
-        }
-        if let Some(direction) = &settings.direction {
-            self.direction = *direction;
-        }
-        if let Some(enabled) = settings.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(action) = &settings.action {
-            self.action = *action;
-        }
-        if let Some(description) = &settings.description {
-            self.description = Some(description.to_string());
-        }
-        if let Some(application_name) = &settings.application_name {
-            self.application_name = Some(application_name.to_string());
-        }
-        if let Some(service_name) = &settings.service_name {
-            self.service_name = Some(service_name.to_string());
-        }
-        if let Some(protocol) = &settings.protocol {
-            if is_icmp {
-                self.local_ports = None;
-                self.remote_ports = None;
-            }
-            self.protocol = Some(*protocol);
-        }
-        if let Some(local_ports) = &settings.local_ports {
-            self.local_ports = Some(local_ports.clone());
-        }
-        if let Some(remote_ports) = &settings.remote_ports {
-            self.remote_ports = Some(remote_ports.clone());
-        }
-        if let Some(local_addresses) = &settings.local_addresses {
-            self.local_addresses = Some(local_addresses.clone());
-        }
-        if let Some(remote_addresses) = &settings.remote_addresses {
-            self.remote_addresses = Some(remote_addresses.clone());
-        }
-        if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-            self.icmp_types_and_codes = Some(icmp_types_and_codes.to_string());
-        }
-        if let Some(interfaces) = &settings.interfaces {
-            self.interfaces = Some(interfaces.clone());
-        }
-        if let Some(interface_types) = &settings.interface_types {
-            self.interface_types = Some(interface_types.clone());
-        }
-        if let Some(grouping) = &settings.grouping {
-            self.grouping = Some(grouping.to_string());
-        }
-        if let Some(profiles) = &settings.profiles {
-            self.profiles = Some(*profiles);
-        }
-        if let Some(edge_traversal) = &settings.edge_traversal {
-            self.edge_traversal = Some(*edge_traversal);
-        }
-        Ok(())
-    }
-
-    /// Enables or disables an existing firewall rule.
-    ///
-    /// This function modifies the state of a firewall rule based on the `disable` parameter.
-    /// If `disable` is `true`, the rule is disabled; otherwise, it is enabled. The function
-    /// updates the `enabled` field accordingly.
-    ///
-    /// # Arguments
-    ///
-    /// * `disable` - A boolean indicating whether to disable (`true`) or enable (`false`) the rule.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<(), WindowsFirewallError>`. If the rule is enabled successfully,
-    /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
-    /// it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` if there is a failure during:
-    /// - COM initialization (`CoInitializeExFailed`).
-    /// - Fetching the rule.
-    /// - Enabling the rule.
-    ///
-    /// # Security
-    ///
-    /// This function requires administrative privileges.
-    pub fn disable(&mut self, disable: bool) -> Result<(), WindowsFirewallError> {
-        if disable {
-            disable_rule(&self.name)?;
-            self.enabled = false;
-        } else {
-            enable_rule(&self.name)?;
-            self.enabled = true;
-        }
-        Ok(())
-    }
-
-    /// Checks if a firewall rule with the given name exists.
-    ///
-    /// This function initializes COM, creates a firewall policy object, and checks if a rule
-    /// with the specified name exists in the Windows Firewall rules list.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's `name` field.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `Result<bool, WindowsFirewallError>`. If the rule exists, it returns `Ok(true)`,
-    /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
-    /// with firewall policy), it returns a `WindowsFirewallError`.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `WindowsFirewallError` in case of failures during COM initialization
-    /// or while interacting with the firewall policy object.
-    ///
-    /// # Security
-    ///
-    /// This function does not require administrative privileges.
-    pub fn exists(&self) -> Result<bool, WindowsFirewallError> {
-        rule_exists(&self.name)
     }
 }
 

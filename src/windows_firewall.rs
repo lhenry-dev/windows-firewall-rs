@@ -28,13 +28,13 @@ use crate::{DirectionFirewallWindows, ProtocolFirewallWindows};
 ///
 /// # Returns
 ///
-/// This function returns a `Result<bool, WindowsFirewallError>`. If the rule exists, it returns `Ok(true)`,
+/// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule exists, it returns `Ok(true)`,
 /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
-/// with firewall policy), it returns a `WindowsFirewallError`.
+/// with firewall policy), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` in case of failures during COM initialization
+/// This function may return a [`WindowsFirewallError`] in case of failures during COM initialization
 /// or while interacting with the firewall policy object.
 ///
 /// # Security
@@ -64,7 +64,7 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 /// Retrieves the firewall rule with the specified name.
 ///
 /// This function initializes COM, creates a firewall policy object, and attempts to retrieve
-/// the firewall rule with the given name. If successful, it returns the rule as a `WindowsFirewallRule`.
+/// the firewall rule with the given name. If successful, it returns the rule as a [`WindowsFirewallRule`].
 ///
 /// # Arguments
 ///
@@ -72,16 +72,16 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 ///
 /// # Returns
 ///
-/// This function returns a `Result<WindowsFirewallRule, WindowsFirewallError>`. If the rule is found and
+/// This function returns a [`Result<WindowsFirewallRule, WindowsFirewallError>`](WindowsFirewallRule). If the rule is found and
 /// successfully converted, it returns `Ok(rule)`. In case of any error (e.g., COM initialization failure,
-/// rule not found, or failure during conversion), it returns a `WindowsFirewallError`.
+/// rule not found, or failure during conversion), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the firewall rule (e.g., rule not found).
-/// - Converting the rule into the `WindowsFirewallRule` struct.
+/// - Converting the rule into the [`WindowsFirewallRule`] struct.
 ///
 /// # Security
 ///
@@ -115,23 +115,23 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
 ///
 /// # Arguments
 ///
-/// * `rule` - A `WindowsFirewallRule` struct representing the firewall rule to add.
+/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the rule is added successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
 /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure or failure to add rule),
-/// it returns a `WindowsFirewallError`.
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Adding the firewall rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn add_rule(rule: WindowsFirewallRule) -> Result<(), WindowsFirewallError> {
     unsafe {
         let hr_com_init = CoInitializeEx(None, DWCOINIT);
@@ -160,24 +160,24 @@ pub fn add_rule(rule: WindowsFirewallRule) -> Result<(), WindowsFirewallError> {
 ///
 /// # Arguments
 ///
-/// * `rule` - A `WindowsFirewallRule` struct representing the firewall rule to add.
+/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<bool, WindowsFirewallError>`. If the rule is added successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
 /// it returns `Ok(true)`. If the rule already exists, it returns `Ok(false)`. In case of an error
-/// (e.g., COM initialization failure or failure to add rule), it returns a `WindowsFirewallError`.
+/// (e.g., COM initialization failure or failure to add rule), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Checking if the rule exists.
 /// - Adding the firewall rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn add_rule_if_not_exists(rule: WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
     let rule_name = rule.name();
 
@@ -192,29 +192,29 @@ pub fn add_rule_if_not_exists(rule: WindowsFirewallRule) -> Result<bool, Windows
 /// Updates an existing firewall rule with new settings.
 ///
 /// This function initializes COM, creates a firewall policy object, and updates the specified rule
-/// with new settings provided in the `WindowsFirewallRuleSettings`. The function updates various
+/// with new settings provided in the [`WindowsFirewallRuleSettings`]. The function updates various
 /// properties of the rule, such as direction, action, name, and more.
 ///
 /// # Arguments
 ///
 /// * `rule_name` - A string slice representing the name of the firewall rule to update.
-/// * `settings` - A `WindowsFirewallRuleSettings` struct containing the updated settings for the rule.
+/// * `settings` - A [`WindowsFirewallRuleSettings`] struct containing the updated settings for the rule.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the rule is updated successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
 /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found, or failure
-/// to update the rule), it returns a `WindowsFirewallError`.
+/// to update the rule), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn update_rule(
     rule_name: &str,
     settings: WindowsFirewallRuleSettings,
@@ -314,20 +314,20 @@ pub fn update_rule(
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the rule is disabled successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is disabled successfully,
 /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
-/// it returns a `WindowsFirewallError`.
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the rule.
 /// - Disabling the rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
     unsafe {
         let hr_com_init = CoInitializeEx(None, DWCOINIT);
@@ -362,20 +362,20 @@ pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the rule is enabled successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is enabled successfully,
 /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
-/// it returns a `WindowsFirewallError`.
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the rule.
 /// - Enabling the rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
     unsafe {
         let hr_com_init = CoInitializeEx(None, DWCOINIT);
@@ -410,19 +410,19 @@ pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the rule is removed successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is removed successfully,
 /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found),
-/// it returns a `WindowsFirewallError`.
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Removing the rule.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
     unsafe {
         let hr_com_init = CoInitializeEx(None, DWCOINIT);
@@ -444,22 +444,22 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
     }
 }
 
-/// Retrieves all the firewall rules as a list of `WindowsFirewallRule` objects.
+/// Retrieves all the firewall rules as a list of [`WindowsFirewallRule`] objects.
 ///
 /// This function initializes COM, creates a firewall policy object, and enumerates through
-/// all the firewall rules, converting them into `WindowsFirewallRule` structs and returning
+/// all the firewall rules, converting them into [`WindowsFirewallRule`] structs and returning
 /// them as a vector.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`. If the rules
+/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`](WindowsFirewallRule). If the rules
 /// are successfully retrieved, it returns `Ok(rules_list)`. In case of an error (e.g., COM initialization failure),
-/// it returns a `WindowsFirewallError`.
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the firewall rules.
 ///
 /// # Security
@@ -514,19 +514,19 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
     }
 }
 
-/// Retrieves all incoming firewall rules as a list of `WindowsFirewallRule` objects.
+/// Retrieves all incoming firewall rules as a list of [`WindowsFirewallRule`] objects.
 ///
 /// This function filters the firewall rules to include only incoming rules.
-/// It leverages `list_rules()` to get all rules and then applies a filter.
+/// It leverages [`list_rules()`] to get all rules and then applies a filter.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`.
+/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`](WindowsFirewallRule).
 /// If successful, it returns `Ok(incoming_rules)`, otherwise an error is returned.
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if `list_rules()` fails.
+/// This function may return a [`WindowsFirewallError`] if [`list_rules()`] fails.
 ///
 /// # Security
 ///
@@ -541,19 +541,19 @@ pub fn list_incoming_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
     Ok(incoming_rules)
 }
 
-/// Retrieves all outgoing firewall rules as a list of `WindowsFirewallRule` objects.
+/// Retrieves all outgoing firewall rules as a list of [`WindowsFirewallRule`] objects.
 ///
 /// This function filters the firewall rules to include only outgoing rules.
-/// It leverages `list_rules()` to get all rules and then applies a filter.
+/// It leverages [`list_rules()`] to get all rules and then applies a filter.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`.
+/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`] .
 /// If successful, it returns `Ok(outgoing_rules)`, otherwise an error is returned.
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if `list_rules()` fails.
+/// This function may return a [`WindowsFirewallError`] if [`list_rules()`] fails.
 ///
 /// # Security
 ///
@@ -571,18 +571,18 @@ pub fn list_outgoing_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
 /// Retrieves the active firewall profile.
 ///
 /// This function initializes COM, creates a firewall policy object, and retrieves the current
-/// active firewall profile, returning it as a `ProfileFirewallWindows` object.
+/// active firewall profile, returning it as a [`ProfileFirewallWindows`] object.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<ProfileFirewallWindows, WindowsFirewallError>`. If the active profile
-/// is successfully retrieved, it returns `Ok(profile)`. In case of an error (e.g., COM initialization failure),
-/// it returns a `WindowsFirewallError`.
+/// This function returns a [`Result<ProfileFirewallWindows, WindowsFirewallError>`](ProfileFirewallWindows). If the active profile
+/// is successfully retrieved, it returns [`Ok(profile)`](ProfileFirewallWindows). In case of an error (e.g., COM initialization failure),
+/// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the active profile.
 ///
 /// # Security
@@ -615,19 +615,19 @@ pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallErr
 ///
 /// # Arguments
 ///
-/// * `profile` - A `ProfileFirewallWindows` enum value representing the firewall profile
+/// * `profile` - A [`ProfileFirewallWindows`] enum value representing the firewall profile
 ///   (such as public, private, or domain) for which the state should be retrieved.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<bool, WindowsFirewallError>`. If the firewall state is successfully
+/// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the firewall state is successfully
 /// retrieved, it returns `Ok(true)` for enabled or `Ok(false)` for disabled. If there is an error (e.g.,
-/// COM initialization failure or inability to retrieve the firewall state), it returns a `WindowsFirewallError`.
+/// COM initialization failure or inability to retrieve the firewall state), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the firewall state.
 ///
 /// # Security
@@ -661,26 +661,26 @@ pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, Windo
 ///
 /// # Arguments
 ///
-/// * `profile` - A `ProfileFirewallWindows` enum value representing the firewall profile
+/// * `profile` - A [`ProfileFirewallWindows`] enum value representing the firewall profile
 ///   (such as public, private, or domain) for which the state should be set.
 /// * `state` - A boolean value indicating the desired firewall state. `true` enables the firewall,
 ///   while `false` disables it.
 ///
 /// # Returns
 ///
-/// This function returns a `Result<(), WindowsFirewallError>`. If the firewall state is successfully
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the firewall state is successfully
 /// set, it returns `Ok(())`. If there is an error (e.g., COM initialization failure or failure to set
-/// the firewall state), it returns a `WindowsFirewallError`.
+/// the firewall state), it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
 ///
-/// This function may return a `WindowsFirewallError` if there is a failure during:
-/// - COM initialization (`CoInitializeExFailed`).
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Setting the firewall state.
 ///
 /// # Security
 ///
-/// This function requires administrative privileges.
+/// ⚠️ This function requires **administrative privileges**.
 pub fn set_firewall_state(
     profile: ProfileFirewallWindows,
     state: bool,

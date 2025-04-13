@@ -2,7 +2,8 @@ use std::{fmt, str::FromStr};
 use windows::Win32::NetworkManagement::WindowsFirewall::{
     NET_FW_ACTION, NET_FW_ACTION_ALLOW, NET_FW_ACTION_BLOCK, NET_FW_ACTION_MAX,
     NET_FW_IP_PROTOCOL_ANY, NET_FW_IP_PROTOCOL_TCP, NET_FW_IP_PROTOCOL_UDP, NET_FW_PROFILE2_ALL,
-    NET_FW_PROFILE2_PUBLIC, NET_FW_PROFILE_CURRENT, NET_FW_PROFILE_DOMAIN, NET_FW_PROFILE_STANDARD,
+    NET_FW_PROFILE2_DOMAIN, NET_FW_PROFILE2_PRIVATE, NET_FW_PROFILE2_PUBLIC,
+    NET_FW_PROFILE_CURRENT, NET_FW_PROFILE_DOMAIN, NET_FW_PROFILE_STANDARD,
     NET_FW_PROFILE_TYPE_MAX, NET_FW_RULE_DIRECTION, NET_FW_RULE_DIR_IN, NET_FW_RULE_DIR_MAX,
     NET_FW_RULE_DIR_OUT,
 };
@@ -13,29 +14,29 @@ use crate::errors::WindowsFirewallError;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ProtocolFirewallWindows {
     /// TCP protocol
-    Tcp = NET_FW_IP_PROTOCOL_TCP.0 as isize,
+    Tcp,
     /// UDP protocol
-    Udp = NET_FW_IP_PROTOCOL_UDP.0 as isize,
+    Udp,
     /// ICMPv4 protocol
-    Icmpv4 = 1i32 as isize,
+    Icmpv4,
     /// ICMPv6 protocol
-    Icmpv6 = 58i32 as isize,
+    Icmpv6,
     /// IGMP protocol
-    Igmp = 2i32 as isize,
+    Igmp,
     /// IPv4 protocol
-    Ipv4 = 4i32 as isize,
+    Ipv4,
     /// IPv6 protocol
-    Ipv6 = 41i32 as isize,
+    Ipv6,
     /// GRE protocol
-    Gre = 47i32 as isize,
+    Gre,
     /// ESP protocol
-    Esp = 50i32 as isize,
+    Esp,
     /// AH protocol
-    Ah = 51i32 as isize,
+    Ah,
     /// SCTP protocol
-    Sctp = 132i32 as isize,
+    Sctp,
     /// Any protocol (wildcard)
-    Any = NET_FW_IP_PROTOCOL_ANY.0 as isize,
+    Any,
 }
 
 /// Implements conversion from `i32` to `ProtocolFirewallWindows`
@@ -64,7 +65,20 @@ impl TryFrom<i32> for ProtocolFirewallWindows {
 /// Implements conversion from `ProtocolFirewallWindows` to `i32`
 impl From<ProtocolFirewallWindows> for i32 {
     fn from(protocol: ProtocolFirewallWindows) -> Self {
-        protocol as i32
+        match protocol {
+            ProtocolFirewallWindows::Tcp => NET_FW_IP_PROTOCOL_TCP.0,
+            ProtocolFirewallWindows::Udp => NET_FW_IP_PROTOCOL_UDP.0,
+            ProtocolFirewallWindows::Icmpv4 => 1,
+            ProtocolFirewallWindows::Icmpv6 => 58,
+            ProtocolFirewallWindows::Igmp => 2,
+            ProtocolFirewallWindows::Ipv4 => 4,
+            ProtocolFirewallWindows::Ipv6 => 41,
+            ProtocolFirewallWindows::Gre => 47,
+            ProtocolFirewallWindows::Esp => 50,
+            ProtocolFirewallWindows::Ah => 51,
+            ProtocolFirewallWindows::Sctp => 132,
+            ProtocolFirewallWindows::Any => NET_FW_IP_PROTOCOL_ANY.0,
+        }
     }
 }
 
@@ -72,11 +86,11 @@ impl From<ProtocolFirewallWindows> for i32 {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DirectionFirewallWindows {
     /// Incoming direction
-    In = NET_FW_RULE_DIR_IN.0 as isize,
+    In,
     /// Outgoing direction
-    Out = NET_FW_RULE_DIR_OUT.0 as isize,
+    Out,
     /// Maximum possible value (not typically used directly)
-    Max = NET_FW_RULE_DIR_MAX.0 as isize,
+    Max,
 }
 
 /// Implements conversion from `NET_FW_RULE_DIRECTION` to `DirectionFirewallWindows`
@@ -107,21 +121,29 @@ impl From<DirectionFirewallWindows> for NET_FW_RULE_DIRECTION {
     }
 }
 
-/// Represents the possible firewall profiles in Windows
-#[derive(Debug, Copy, Clone, PartialEq)]
+/// Represents the various Windows Firewall profiles.
+///
+/// This enum includes both legacy (v1) and modern (v2) profile types.
+/// Prefer using the `V2` variants unless you're targeting legacy Windows versions (pre-Vista).
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ProfileFirewallWindows {
-    /// Domain profile
-    Domain = NET_FW_PROFILE_DOMAIN.0 as isize,
-    /// Standard profile
-    Standard = NET_FW_PROFILE_STANDARD.0 as isize,
-    /// Current active profile
-    Current = NET_FW_PROFILE_CURRENT.0 as isize,
-    /// Maximum profile value (not typically used directly)
-    Max = NET_FW_PROFILE_TYPE_MAX.0 as isize,
-    /// Public profile
-    Public = NET_FW_PROFILE2_PUBLIC.0 as isize,
-    /// All profiles
-    All = NET_FW_PROFILE2_ALL.0 as isize,
+    /// Modern: Domain profile.
+    Domain,
+    /// Modern: Private profile (used on trusted networks like home/work).
+    Private,
+    /// Modern: Public profile (used on untrusted networks like public Wi-Fi).
+    Public,
+    /// Modern: All profiles combined (bitflag: DOMAIN | PRIVATE | PUBLIC).
+    All,
+
+    /// Legacy: Domain profile (Windows XP/2003).
+    LegacyDomain,
+    /// Legacy: Standard profile (aka Private/Public in older systems).
+    LegacyStandard,
+    /// Legacy: Current profile (represents the currently active profile).
+    LegacyCurrent,
+    /// Legacy: Max profile value (internal use only).
+    LegacyMax,
 }
 
 /// Implements conversion from `i32` to `ProfileFirewallWindows`
@@ -131,29 +153,35 @@ impl TryFrom<i32> for ProfileFirewallWindows {
     fn try_from(value: i32) -> Result<Self, WindowsFirewallError> {
         match value {
             // Convert integer value to the corresponding enum variant
-            x if x == NET_FW_PROFILE_DOMAIN.0 => Ok(ProfileFirewallWindows::Domain),
-            x if x == NET_FW_PROFILE_STANDARD.0 => Ok(ProfileFirewallWindows::Standard),
-            x if x == NET_FW_PROFILE_CURRENT.0 => Ok(ProfileFirewallWindows::Current),
-            x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(ProfileFirewallWindows::Max),
+            x if x == NET_FW_PROFILE2_DOMAIN.0 => Ok(ProfileFirewallWindows::Domain),
+            x if x == NET_FW_PROFILE2_PRIVATE.0 => Ok(ProfileFirewallWindows::Private),
             x if x == NET_FW_PROFILE2_PUBLIC.0 => Ok(ProfileFirewallWindows::Public),
             x if x == NET_FW_PROFILE2_ALL.0 => Ok(ProfileFirewallWindows::All),
+
+            x if x == NET_FW_PROFILE_DOMAIN.0 => Ok(ProfileFirewallWindows::LegacyDomain),
+            x if x == NET_FW_PROFILE_STANDARD.0 => Ok(ProfileFirewallWindows::LegacyStandard),
+            x if x == NET_FW_PROFILE_CURRENT.0 => Ok(ProfileFirewallWindows::LegacyCurrent),
+            x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(ProfileFirewallWindows::LegacyMax),
             // Return an error if the value is not recognized
             _ => Err(WindowsFirewallError::InvalidNetFwProfile),
         }
     }
 }
 
-/// Implements conversion from `ProfileFirewallWindows` to `i32`
+/// Implements conversion from [`ProfileFirewallWindows`] to `i32`
 impl From<ProfileFirewallWindows> for i32 {
     fn from(profile: ProfileFirewallWindows) -> Self {
         match profile {
             // Convert each enum variant to its corresponding integer value
-            ProfileFirewallWindows::Domain => NET_FW_PROFILE_DOMAIN.0,
-            ProfileFirewallWindows::Standard => NET_FW_PROFILE_STANDARD.0,
-            ProfileFirewallWindows::Current => NET_FW_PROFILE_CURRENT.0,
-            ProfileFirewallWindows::Max => NET_FW_PROFILE_TYPE_MAX.0,
+            ProfileFirewallWindows::Domain => NET_FW_PROFILE2_DOMAIN.0,
+            ProfileFirewallWindows::Private => NET_FW_PROFILE2_PRIVATE.0,
             ProfileFirewallWindows::Public => NET_FW_PROFILE2_PUBLIC.0,
             ProfileFirewallWindows::All => NET_FW_PROFILE2_ALL.0,
+
+            ProfileFirewallWindows::LegacyDomain => NET_FW_PROFILE_DOMAIN.0,
+            ProfileFirewallWindows::LegacyStandard => NET_FW_PROFILE_STANDARD.0,
+            ProfileFirewallWindows::LegacyCurrent => NET_FW_PROFILE_CURRENT.0,
+            ProfileFirewallWindows::LegacyMax => NET_FW_PROFILE_TYPE_MAX.0,
         }
     }
 }
@@ -162,11 +190,11 @@ impl From<ProfileFirewallWindows> for i32 {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ActionFirewallWindows {
     /// Block network traffic
-    Block = windows::Win32::NetworkManagement::WindowsFirewall::NET_FW_ACTION_BLOCK.0 as isize,
+    Block,
     /// Allow network traffic
-    Allow = windows::Win32::NetworkManagement::WindowsFirewall::NET_FW_ACTION_ALLOW.0 as isize,
+    Allow,
     /// Maximum possible value (not typically used directly)
-    Max = windows::Win32::NetworkManagement::WindowsFirewall::NET_FW_ACTION_MAX.0 as isize,
+    Max,
 }
 
 /// Implements conversion from `NET_FW_ACTION` to `ActionFirewallWindows`
