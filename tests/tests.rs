@@ -44,7 +44,7 @@ fn test_get_active_profile() {
 #[test]
 fn test_get_firewall_state() {
     use ProfileFirewallWindows::*;
-    let profiles = [Standard, Current, Public];
+    let profiles = [Private, Domain, Public];
 
     for profile in profiles.iter() {
         let state = get_firewall_state(*profile);
@@ -273,7 +273,7 @@ fn test_tcp_windows_firewall_rule_conversion() {
     // let rule_interfaces = ["Wi-Fi"];
     let rule_interface_types = [Wireless, Lan];
     let rule_grouping = "Group A";
-    let rule_profiles = ProfileFirewallWindows::Standard;
+    let rule_profiles = ProfileFirewallWindows::Private;
     let rule_edge_traversal = false;
 
     let rule = WindowsFirewallRule::builder()
@@ -373,7 +373,7 @@ fn test_icmpv4_firewall_rule_conversion() {
     // let rule_interfaces = ["Wi-Fi"];
     let rule_interface_types = [Wireless, Lan];
     let rule_grouping = "Group A";
-    let rule_profiles = ProfileFirewallWindows::Standard;
+    let rule_profiles = ProfileFirewallWindows::Private;
     let rule_edge_traversal = false;
 
     let rule = WindowsFirewallRule::builder()

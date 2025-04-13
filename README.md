@@ -150,7 +150,7 @@ match rule.remove() {
 ```rust
 use windows_firewall::{get_firewall_state, ProfileFirewallWindows};
 
-match get_firewall_state(ProfileFirewallWindows::Current) {
+match get_firewall_state(ProfileFirewallWindows::Public) {
     Ok(enabled) => println!("Firewall is {}", if enabled { "enabled" } else { "disabled" }),
     Err(e) => eprintln!("Failed to get firewall state: {}", e),
 }

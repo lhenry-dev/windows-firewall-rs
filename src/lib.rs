@@ -11,6 +11,7 @@ mod firewall_rule;
 mod utils;
 mod windows_firewall;
 
+pub use errors::WindowsFirewallError;
 pub use firewall_enums::{
     ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes, ProfileFirewallWindows,
     ProtocolFirewallWindows,

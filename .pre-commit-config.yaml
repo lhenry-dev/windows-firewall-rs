@@ -8,7 +8,7 @@
 #   - Manual run: pre-commit run --all-files
 #   - Skip checks: git commit --no-verify
 
-exclude: target/|\.git/|.*\.snap
+exclude: target/|\.git/|.*\.snap|^src/main\.rs$
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
