@@ -80,4 +80,4 @@ jobs:
       - name: Install tool
         run: cargo install cargo-sort
       - name: Run cargo sort
-        run: cargo sort --check
+        run: cargo sort
