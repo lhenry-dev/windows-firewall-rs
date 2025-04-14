@@ -1,0 +1,63 @@
+# Pre-commit configuration
+# Installation:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Usage:
+#   - Runs automatically on git commit
+#   - Manual run: pre-commit run --all-files
+#   - Skip checks: git commit --no-verify
+
+exclude: target/|\.git/|.*\.snap|^src/main\.rs$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: fix-byte-order-marker
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
+        args: [
+          "--",
+          "-D", "warnings",
+          "-D", "clippy::expect_used",
+          "-D", "clippy::panic",
+          "-D", "clippy::unwrap_used"
+        ]
+
+  - repo: https://github.com/DevinR528/cargo-sort
+    rev: v1.0.9
+    hooks:
+      - id: cargo-sort
+
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: Cargo Audit
+        entry: cargo audit
+        language: system
+        pass_filenames: false
+
+      - id: cargo-machete
+        name: Cargo Machete
+        entry: cargo machete
+        language: system
+        pass_filenames: false
+
+      - id: cargo-test
+        name: Cargo Test
+        entry: cargo test --all --quiet
+        language: system
+        pass_filenames: false
