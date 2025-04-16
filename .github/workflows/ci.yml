@@ -81,3 +81,13 @@ jobs:
         run: cargo install cargo-sort
       - name: Run cargo sort
         run: cargo sort
+
+  msrv:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-msrv
+        run: cargo install cargo-msrv
+      - name: Verify Minimum Supported Rust Version
+        run: cargo msrv verify
