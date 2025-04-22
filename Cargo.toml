@@ -28,7 +28,7 @@ windows = { version = "0.61", features = [
     "Win32_System_Ole",
     "Win32_System_Variant",
 ] }
-windows-result = "0.3.0"
+windows-result = "0.3"
 
 [dev-dependencies]
-serial_test = "3.2.0"
+serial_test = "3.2"
