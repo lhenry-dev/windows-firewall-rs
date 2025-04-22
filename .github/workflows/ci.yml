@@ -93,7 +93,7 @@ jobs:
       - name: Verify Minimum Supported Rust Version
         run: cargo msrv verify
 
-  test:
+  test2test:
     runs-on: windows-latest
     steps:
       - name: List network interfaces
