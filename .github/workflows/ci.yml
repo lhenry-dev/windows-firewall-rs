@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+  schedule: [cron: "40 1 * * 1"] # every Monday at 01:40 UTC
 
 permissions:
   contents: read
@@ -28,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all-features
+      - run: cargo test --all-features -- --ignored
 
   fmt:
     runs-on: windows-latest
@@ -41,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo clippy --all-features -- -D warnings
+      - run: cargo clippy --all-features -- -D warnings -D clippy::expect_used -D clippy::panic -D clippy::unwrap_used
 
   doc:
     runs-on: windows-latest

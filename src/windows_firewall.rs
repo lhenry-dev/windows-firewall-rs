@@ -6,15 +6,15 @@ use windows::core::{Interface, BSTR};
 use windows::Win32::NetworkManagement::WindowsFirewall::{
     INetFwPolicy2, INetFwRule, INetFwRules, NetFwPolicy2, NET_FW_PROFILE_TYPE2,
 };
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize};
+use windows::Win32::System::Com::CoCreateInstance;
 use windows::Win32::System::Ole::IEnumVARIANT;
 use windows::Win32::System::Variant::VARIANT;
 
-use crate::constants::{DWCLSCONTEXT, DWCOINIT};
+use crate::constants::DWCLSCONTEXT;
 use crate::errors::WindowsFirewallError;
 use crate::firewall_enums::ProfileFirewallWindows;
 use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
-use crate::utils::{convert_hashset_to_bstr, hashset_to_variant};
+use crate::utils::{convert_hashset_to_bstr, hashset_to_variant, with_com_initialized};
 use crate::{DirectionFirewallWindows, ProtocolFirewallWindows};
 
 /// Checks if a firewall rule with the given name exists.
@@ -41,16 +41,7 @@ use crate::{DirectionFirewallWindows, ProtocolFirewallWindows};
 ///
 /// This function does not require administrative privileges.
 pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -58,7 +49,7 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
         let rule_name = BSTR::from(name);
         let exist = fw_rules.Item(&rule_name).is_ok();
         Ok(exist)
-    }
+    })
 }
 
 /// Retrieves the firewall rule with the specified name.
@@ -87,16 +78,7 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 ///
 /// This function does not require administrative privileges.
 pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -104,7 +86,7 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
         let rule_name = BSTR::from(name);
         let rule = fw_rules.Item(&rule_name);
         WindowsFirewallRule::try_from(rule?)
-    }
+    })
 }
 
 /// Adds a new firewall rule to the system.
@@ -133,16 +115,7 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
 ///
 /// ⚠️ This function requires **administrative privileges**.
 pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
         let new_rule: INetFwRule = rule.try_into()?;
@@ -150,7 +123,7 @@ pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> 
         fw_rules.Add(&new_rule)?;
 
         Ok(())
-    }
+    })
 }
 
 /// Adds a new firewall rule to the system only if a rule with the same name doesn't exist.
@@ -219,16 +192,7 @@ pub fn update_rule(
     rule_name: &str,
     settings: &WindowsFirewallRuleSettings,
 ) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
 
@@ -237,7 +201,7 @@ pub fn update_rule(
 
         let is_icmp = matches!(
             &settings.protocol,
-            Some(ProtocolFirewallWindows::Icmpv4) | Some(ProtocolFirewallWindows::Icmpv6)
+            Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
         );
 
         if let Some(name) = &settings.name {
@@ -265,6 +229,8 @@ pub fn update_rule(
             if is_icmp {
                 rule.SetLocalPorts(&BSTR::from(""))?;
                 rule.SetRemotePorts(&BSTR::from(""))?;
+            } else {
+                rule.SetIcmpTypesAndCodes(&BSTR::from(""))?;
             }
             rule.SetProtocol(protocol.into())?;
         }
@@ -300,7 +266,7 @@ pub fn update_rule(
         }
 
         Ok(())
-    }
+    })
 }
 
 /// Disables an existing firewall rule.
@@ -329,16 +295,7 @@ pub fn update_rule(
 ///
 /// ⚠️ This function requires **administrative privileges**.
 pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
 
@@ -348,7 +305,7 @@ pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         rule.SetEnabled(false.into())?;
 
         Ok(())
-    }
+    })
 }
 
 /// Enables an existing firewall rule.
@@ -377,16 +334,7 @@ pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 ///
 /// ⚠️ This function requires **administrative privileges**.
 pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
 
@@ -396,7 +344,7 @@ pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         rule.SetEnabled(true.into())?;
 
         Ok(())
-    }
+    })
 }
 
 /// Removes the specified firewall rule from the system.
@@ -424,16 +372,7 @@ pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 ///
 /// ⚠️ This function requires **administrative privileges**.
 pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
 
@@ -441,7 +380,7 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         fw_rules.Remove(&rule_name)?;
 
         Ok(())
-    }
+    })
 }
 
 /// Retrieves all the firewall rules as a list of [`WindowsFirewallRule`] objects.
@@ -468,16 +407,7 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
     let mut rules_list = Vec::new();
 
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
         let rules_count = fw_rules.Count()?;
@@ -511,7 +441,7 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
         }
 
         Ok(rules_list)
-    }
+    })
 }
 
 /// Retrieves all incoming firewall rules as a list of [`WindowsFirewallRule`] objects.
@@ -589,22 +519,13 @@ pub fn list_outgoing_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
 ///
 /// This function does not require administrative privileges.
 pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
         let active_profile = ProfileFirewallWindows::try_from(fw_policy.CurrentProfileTypes()?)?;
 
         Ok(active_profile)
-    }
+    })
 }
 
 /// Retrieves the current state of the firewall for the specified profile.
@@ -634,16 +555,7 @@ pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallErr
 ///
 /// This function does not require administrative privileges.
 pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
         let enabled = fw_policy
@@ -651,7 +563,7 @@ pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, Windo
             .as_bool();
 
         Ok(enabled)
-    }
+    })
 }
 
 /// Sets the firewall state (enabled or disabled) for the specified profile.
@@ -685,20 +597,9 @@ pub fn set_firewall_state(
     profile: ProfileFirewallWindows,
     state: bool,
 ) -> Result<(), WindowsFirewallError> {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |_| CoUninitialize());
-
+    with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
-
         fw_policy.put_FirewallEnabled(NET_FW_PROFILE_TYPE2(profile.into()), state.into())?;
-
         Ok(())
-    }
+    })
 }

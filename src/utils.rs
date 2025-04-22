@@ -1,23 +1,30 @@
-use std::{collections::HashSet, ffi::OsStr, str::FromStr};
+use scopeguard::guard;
+use std::{
+    collections::HashSet,
+    ffi::OsStr,
+    ptr::{addr_of, from_ref},
+    str::FromStr,
+};
 use windows::{
     core::{BSTR, PWSTR},
     Win32::System::{
+        Com::{CoInitializeEx, CoUninitialize},
         Ole::{SafeArrayCreateVector, SafeArrayPutElement},
         Variant::{self, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT},
     },
 };
 
-pub(crate) fn to_string_hashset_option<T, I>(items: I) -> Option<HashSet<String>>
+use crate::{constants::DWCOINIT, WindowsFirewallError};
+
+pub fn to_string_hashset<T, I>(items: I) -> HashSet<String>
 where
     I: IntoIterator<Item = T>,
     T: Into<String>,
 {
-    Some(items.into_iter().map(Into::into).collect())
+    items.into_iter().map(Into::into).collect()
 }
 
-pub(crate) fn convert_bstr_to_hashset<T>(
-    bstr: Result<BSTR, windows_result::Error>,
-) -> Option<HashSet<T>>
+pub fn convert_bstr_to_hashset<T>(bstr: Result<BSTR, windows_result::Error>) -> Option<HashSet<T>>
 where
     T: FromStr + Eq + std::hash::Hash,
 {
@@ -28,9 +35,7 @@ where
                 .split(',')
                 .filter_map(|s| {
                     let trimmed = s.trim();
-                    if trimmed.is_empty() {
-                        None
-                    } else {
+                    if !trimmed.is_empty() {
                         if let Ok(parsed_t) = trimmed.parse::<T>() {
                             return Some(parsed_t);
                         }
@@ -40,16 +45,15 @@ where
                                 return Some(parsed_t);
                             }
                         }
-
-                        None
                     }
+                    None
                 })
                 .collect::<HashSet<T>>()
         })
         .filter(|hash_set| !hash_set.is_empty())
 }
 
-pub(crate) fn convert_hashset_to_bstr<T>(hashset: Option<&HashSet<T>>) -> BSTR
+pub fn convert_hashset_to_bstr<T>(hashset: Option<&HashSet<T>>) -> BSTR
 where
     T: ToString,
 {
@@ -58,7 +62,7 @@ where
         .map(|hs| {
             let joined_str = hs
                 .iter()
-                .map(|item| item.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(",");
             BSTR::from(joined_str)
@@ -66,7 +70,7 @@ where
         .unwrap_or_default()
 }
 
-pub(crate) fn hashset_to_variant<T>(hashset: &HashSet<T>) -> windows_result::Result<VARIANT>
+pub fn hashset_to_variant<T>(hashset: &HashSet<T>) -> windows_result::Result<VARIANT>
 where
     T: ToString + AsRef<OsStr>,
 {
@@ -75,7 +79,7 @@ where
     }
 
     unsafe {
-        let count = hashset.len() as u32;
+        let count = u32::try_from(hashset.len()).map_err(|_| windows::core::Error::from_win32())?;
         let psa = SafeArrayCreateVector(VT_VARIANT, 0, count);
 
         if psa.is_null() {
@@ -94,8 +98,8 @@ where
 
             SafeArrayPutElement(
                 psa,
-                &(i as i32) as *const _,
-                &vt_element as *const _ as *const std::ffi::c_void,
+                from_ref(&i32::try_from(i)?).cast(),
+                addr_of!(vt_element).cast::<std::ffi::c_void>(),
             )?;
         }
 
@@ -110,7 +114,7 @@ where
     }
 }
 
-pub(crate) fn variant_to_hashset(variant: &VARIANT) -> windows::core::Result<HashSet<String>> {
+pub fn variant_to_hashset(variant: &VARIANT) -> windows::core::Result<HashSet<String>> {
     unsafe {
         let count = Variant::VariantGetElementCount(variant);
 
@@ -121,11 +125,27 @@ pub(crate) fn variant_to_hashset(variant: &VARIANT) -> windows::core::Result<Has
         let pwstr: PWSTR = VariantToStringAlloc(variant)?;
         let wide_cstr = pwstr.to_string()?;
 
-        let substrings: Vec<&str> = wide_cstr.split("; ").collect();
-
-        let hashset = substrings.into_iter().map(|s| s.to_string()).collect();
+        let hashset = wide_cstr.split("; ").map(str::to_string).collect();
 
         Ok(hashset)
+    }
+}
+
+pub fn with_com_initialized<F, R>(f: F) -> Result<R, WindowsFirewallError>
+where
+    F: FnOnce() -> Result<R, WindowsFirewallError>,
+{
+    unsafe {
+        let hr_com_init = CoInitializeEx(None, DWCOINIT);
+        if hr_com_init.is_err() {
+            return Err(WindowsFirewallError::CoInitializeExFailed(
+                hr_com_init.message(),
+            ));
+        }
+
+        let _com_cleanup = guard((), |()| CoUninitialize());
+
+        f()
     }
 }
 
@@ -198,11 +218,11 @@ mod tests {
 
         let result_str = result.to_string();
         let mut result_vec: Vec<&str> = result_str.split(',').collect();
-        result_vec.sort();
+        result_vec.sort_unstable();
 
         let expected_str = expected.to_string();
         let mut expected_vec: Vec<&str> = expected_str.split(',').collect();
-        expected_vec.sort();
+        expected_vec.sort_unstable();
 
         assert_eq!(result_vec, expected_vec);
     }
