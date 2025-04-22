@@ -1,21 +1,21 @@
-use scopeguard::guard;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
 use typed_builder::TypedBuilder;
 use windows::core::BSTR;
+use windows::Win32::Foundation::VARIANT_BOOL;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize};
+use windows::Win32::System::Com::CoCreateInstance;
 
-use crate::constants::{DWCLSCONTEXT, DWCOINIT};
+use crate::constants::DWCLSCONTEXT;
 use crate::errors::WindowsFirewallError;
 use crate::firewall_enums::{
     ActionFirewallWindows, DirectionFirewallWindows, ProfileFirewallWindows,
     ProtocolFirewallWindows,
 };
 use crate::utils::{
-    convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, to_string_hashset_option,
-    variant_to_hashset,
+    convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, to_string_hashset,
+    variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{remove_rule, rule_exists, update_rule};
 use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, InterfaceTypes};
@@ -115,10 +115,10 @@ pub struct WindowsFirewallRule {
     icmp_types_and_codes: Option<String>,
 
     /// A list of network interfaces this rule applies to, identified by their friendly names.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| to_string_hashset_option(items)))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
     interfaces: Option<HashSet<String>>,
 
-    /// A list of interface types this rule applies to (e.g., Wireless, Lan, RemoteAccess, or All).
+    /// A list of interface types this rule applies to (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
     interface_types: Option<HashSet<InterfaceTypes>>,
 
@@ -135,6 +135,7 @@ pub struct WindowsFirewallRule {
     edge_traversal: Option<bool>,
 }
 
+#[allow(clippy::must_use_candidate)]
 impl WindowsFirewallRule {
     /// Adds a new firewall rule to the system.
     ///
@@ -258,7 +259,7 @@ impl WindowsFirewallRule {
 
         let is_icmp = matches!(
             &settings.protocol,
-            Some(ProtocolFirewallWindows::Icmpv4) | Some(ProtocolFirewallWindows::Icmpv6)
+            Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
         );
 
         if let Some(name) = &settings.name {
@@ -286,6 +287,8 @@ impl WindowsFirewallRule {
             if is_icmp {
                 self.local_ports = None;
                 self.remote_ports = None;
+            } else {
+                self.icmp_types_and_codes = None;
             }
             self.protocol = Some(*protocol);
         }
@@ -392,87 +395,87 @@ impl WindowsFirewallRule {
     }
 
     /// Returns the direction of the firewall rule (inbound or outbound)
-    pub fn direction(&self) -> &DirectionFirewallWindows {
+    pub const fn direction(&self) -> &DirectionFirewallWindows {
         &self.direction
     }
 
     /// Returns whether the firewall rule is enabled or not
-    pub fn enabled(&self) -> bool {
+    pub const fn enabled(&self) -> bool {
         self.enabled
     }
 
     /// Returns the action to be taken by the firewall rule (allow/block)
-    pub fn action(&self) -> &ActionFirewallWindows {
+    pub const fn action(&self) -> &ActionFirewallWindows {
         &self.action
     }
 
     /// Returns the description of the firewall rule, if available
-    pub fn description(&self) -> Option<&String> {
+    pub const fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }
 
     /// Returns the application name associated with the firewall rule, if available
-    pub fn application_name(&self) -> Option<&String> {
+    pub const fn application_name(&self) -> Option<&String> {
         self.application_name.as_ref()
     }
 
     /// Returns the service name associated with the firewall rule, if available
-    pub fn service_name(&self) -> Option<&String> {
+    pub const fn service_name(&self) -> Option<&String> {
         self.service_name.as_ref()
     }
 
     /// Returns the protocol used by the firewall rule, if available
-    pub fn protocol(&self) -> Option<&ProtocolFirewallWindows> {
+    pub const fn protocol(&self) -> Option<&ProtocolFirewallWindows> {
         self.protocol.as_ref()
     }
 
     /// Returns the set of local ports associated with the firewall rule, if available
-    pub fn local_ports(&self) -> Option<&HashSet<u16>> {
+    pub const fn local_ports(&self) -> Option<&HashSet<u16>> {
         self.local_ports.as_ref()
     }
 
     /// Returns the set of remote ports associated with the firewall rule, if available
-    pub fn remote_ports(&self) -> Option<&HashSet<u16>> {
+    pub const fn remote_ports(&self) -> Option<&HashSet<u16>> {
         self.remote_ports.as_ref()
     }
 
     /// Returns the set of local addresses associated with the firewall rule, if available
-    pub fn local_addresses(&self) -> Option<&HashSet<IpAddr>> {
+    pub const fn local_addresses(&self) -> Option<&HashSet<IpAddr>> {
         self.local_addresses.as_ref()
     }
 
     /// Returns the set of remote addresses associated with the firewall rule, if available
-    pub fn remote_addresses(&self) -> Option<&HashSet<IpAddr>> {
+    pub const fn remote_addresses(&self) -> Option<&HashSet<IpAddr>> {
         self.remote_addresses.as_ref()
     }
 
     /// Returns the ICMP types and codes associated with the rule, if available
-    pub fn icmp_types_and_codes(&self) -> Option<&String> {
+    pub const fn icmp_types_and_codes(&self) -> Option<&String> {
         self.icmp_types_and_codes.as_ref()
     }
 
     /// Returns the set of interfaces associated with the firewall rule, if available
-    pub fn interfaces(&self) -> Option<&HashSet<String>> {
+    pub const fn interfaces(&self) -> Option<&HashSet<String>> {
         self.interfaces.as_ref()
     }
 
     /// Returns the set of interface types associated with the firewall rule, if available
-    pub fn interface_types(&self) -> Option<&HashSet<InterfaceTypes>> {
+    pub const fn interface_types(&self) -> Option<&HashSet<InterfaceTypes>> {
         self.interface_types.as_ref()
     }
 
     /// Returns the grouping of the rule, if available
-    pub fn grouping(&self) -> Option<&String> {
+    pub const fn grouping(&self) -> Option<&String> {
         self.grouping.as_ref()
     }
 
     /// Returns the profiles associated with the firewall rule, if available
-    pub fn profiles(&self) -> Option<&ProfileFirewallWindows> {
+    pub const fn profiles(&self) -> Option<&ProfileFirewallWindows> {
         self.profiles.as_ref()
     }
 
     /// Returns whether edge traversal is allowed by the rule
-    pub fn edge_traversal(&self) -> Option<bool> {
+    pub const fn edge_traversal(&self) -> Option<bool> {
         self.edge_traversal
     }
 }
@@ -482,7 +485,7 @@ impl TryFrom<INetFwRule> for WindowsFirewallRule {
 
     fn try_from(fw_rule: INetFwRule) -> Result<Self, WindowsFirewallError> {
         unsafe {
-            Ok(WindowsFirewallRule {
+            Ok(Self {
                 name: fw_rule.Name().map(|bstr| bstr.to_string())?,
                 direction: fw_rule.Direction()?.try_into()?,
                 enabled: fw_rule.Enabled()?.into(),
@@ -535,7 +538,7 @@ impl TryFrom<INetFwRule> for WindowsFirewallRule {
                     }
                 }),
                 profiles: fw_rule.Profiles()?.try_into().ok(),
-                edge_traversal: fw_rule.EdgeTraversal().ok().map(|v| v.as_bool()),
+                edge_traversal: fw_rule.EdgeTraversal().ok().map(VARIANT_BOOL::as_bool),
             })
         }
     }
@@ -545,17 +548,8 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
     type Error = WindowsFirewallError;
 
     fn try_from(rule: &WindowsFirewallRule) -> Result<Self, WindowsFirewallError> {
-        unsafe {
-            let hr_com_init = CoInitializeEx(None, DWCOINIT);
-            if hr_com_init.is_err() {
-                return Err(WindowsFirewallError::CoInitializeExFailed(
-                    hr_com_init.message(),
-                ));
-            }
-
-            let _com_cleanup = guard((), |_| CoUninitialize());
-
-            let fw_rule: INetFwRule = CoCreateInstance(&NetFwRule, None, DWCLSCONTEXT)?;
+        with_com_initialized(|| unsafe {
+            let fw_rule: Self = CoCreateInstance(&NetFwRule, None, DWCLSCONTEXT)?;
 
             fw_rule.SetName(&BSTR::from(&rule.name))?;
             fw_rule.SetDirection(rule.direction.into())?;
@@ -605,7 +599,7 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
             }
 
             Ok(fw_rule)
-        }
+        })
     }
 }
 
@@ -682,10 +676,10 @@ pub struct WindowsFirewallRuleSettings {
     pub(crate) icmp_types_and_codes: Option<String>,
 
     /// A set of interfaces associated with the firewall rule.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| to_string_hashset_option(items)))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
     pub(crate) interfaces: Option<HashSet<String>>,
 
-    /// A set of interface types associated with the firewall rule (e.g., Wireless, Lan, RemoteAccess, or All).
+    /// A set of interface types associated with the firewall rule (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
     pub(crate) interface_types: Option<HashSet<InterfaceTypes>>,
 

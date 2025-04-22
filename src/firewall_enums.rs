@@ -11,15 +11,15 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
 use crate::errors::WindowsFirewallError;
 
 /// Represents the possible firewall protocols in Windows
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ProtocolFirewallWindows {
     /// TCP protocol
     Tcp,
     /// UDP protocol
     Udp,
-    /// ICMPv4 protocol
+    /// `ICMPv4` protocol
     Icmpv4,
-    /// ICMPv6 protocol
+    /// `ICMPv6` protocol
     Icmpv6,
     /// IGMP protocol
     Igmp,
@@ -45,18 +45,18 @@ impl TryFrom<i32> for ProtocolFirewallWindows {
 
     fn try_from(value: i32) -> Result<Self, WindowsFirewallError> {
         match value {
-            x if x == NET_FW_IP_PROTOCOL_TCP.0 => Ok(ProtocolFirewallWindows::Tcp),
-            x if x == NET_FW_IP_PROTOCOL_UDP.0 => Ok(ProtocolFirewallWindows::Udp),
-            1 => Ok(ProtocolFirewallWindows::Icmpv4),
-            58 => Ok(ProtocolFirewallWindows::Icmpv6),
-            2 => Ok(ProtocolFirewallWindows::Igmp),
-            4 => Ok(ProtocolFirewallWindows::Ipv4),
-            41 => Ok(ProtocolFirewallWindows::Ipv6),
-            47 => Ok(ProtocolFirewallWindows::Gre),
-            50 => Ok(ProtocolFirewallWindows::Esp),
-            51 => Ok(ProtocolFirewallWindows::Ah),
-            132 => Ok(ProtocolFirewallWindows::Sctp),
-            x if x == NET_FW_IP_PROTOCOL_ANY.0 => Ok(ProtocolFirewallWindows::Any),
+            x if x == NET_FW_IP_PROTOCOL_TCP.0 => Ok(Self::Tcp),
+            x if x == NET_FW_IP_PROTOCOL_UDP.0 => Ok(Self::Udp),
+            1 => Ok(Self::Icmpv4),
+            58 => Ok(Self::Icmpv6),
+            2 => Ok(Self::Igmp),
+            4 => Ok(Self::Ipv4),
+            41 => Ok(Self::Ipv6),
+            47 => Ok(Self::Gre),
+            50 => Ok(Self::Esp),
+            51 => Ok(Self::Ah),
+            132 => Ok(Self::Sctp),
+            x if x == NET_FW_IP_PROTOCOL_ANY.0 => Ok(Self::Any),
             _ => Err(WindowsFirewallError::InvalidNetFwIpProtocol),
         }
     }
@@ -83,7 +83,7 @@ impl From<ProtocolFirewallWindows> for i32 {
 }
 
 /// Represents the possible firewall rule directions in Windows
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DirectionFirewallWindows {
     /// Incoming direction
     In,
@@ -100,9 +100,9 @@ impl TryFrom<NET_FW_RULE_DIRECTION> for DirectionFirewallWindows {
     fn try_from(value: NET_FW_RULE_DIRECTION) -> Result<Self, WindowsFirewallError> {
         match value {
             // Convert rule direction value to the corresponding enum variant
-            NET_FW_RULE_DIR_IN => Ok(DirectionFirewallWindows::In),
-            NET_FW_RULE_DIR_OUT => Ok(DirectionFirewallWindows::Out),
-            NET_FW_RULE_DIR_MAX => Ok(DirectionFirewallWindows::Max),
+            NET_FW_RULE_DIR_IN => Ok(Self::In),
+            NET_FW_RULE_DIR_OUT => Ok(Self::Out),
+            NET_FW_RULE_DIR_MAX => Ok(Self::Max),
             // Return an error if the value is not recognized
             _ => Err(WindowsFirewallError::InvalidNetFwRuleDirection),
         }
@@ -153,15 +153,15 @@ impl TryFrom<i32> for ProfileFirewallWindows {
     fn try_from(value: i32) -> Result<Self, WindowsFirewallError> {
         match value {
             // Convert integer value to the corresponding enum variant
-            x if x == NET_FW_PROFILE2_DOMAIN.0 => Ok(ProfileFirewallWindows::Domain),
-            x if x == NET_FW_PROFILE2_PRIVATE.0 => Ok(ProfileFirewallWindows::Private),
-            x if x == NET_FW_PROFILE2_PUBLIC.0 => Ok(ProfileFirewallWindows::Public),
-            x if x == NET_FW_PROFILE2_ALL.0 => Ok(ProfileFirewallWindows::All),
+            x if x == NET_FW_PROFILE2_DOMAIN.0 => Ok(Self::Domain),
+            x if x == NET_FW_PROFILE2_PRIVATE.0 => Ok(Self::Private),
+            x if x == NET_FW_PROFILE2_PUBLIC.0 => Ok(Self::Public),
+            x if x == NET_FW_PROFILE2_ALL.0 => Ok(Self::All),
 
-            x if x == NET_FW_PROFILE_DOMAIN.0 => Ok(ProfileFirewallWindows::LegacyDomain),
-            x if x == NET_FW_PROFILE_STANDARD.0 => Ok(ProfileFirewallWindows::LegacyStandard),
-            x if x == NET_FW_PROFILE_CURRENT.0 => Ok(ProfileFirewallWindows::LegacyCurrent),
-            x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(ProfileFirewallWindows::LegacyMax),
+            x if x == NET_FW_PROFILE_DOMAIN.0 => Ok(Self::LegacyDomain),
+            x if x == NET_FW_PROFILE_STANDARD.0 => Ok(Self::LegacyStandard),
+            x if x == NET_FW_PROFILE_CURRENT.0 => Ok(Self::LegacyCurrent),
+            x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(Self::LegacyMax),
             // Return an error if the value is not recognized
             _ => Err(WindowsFirewallError::InvalidNetFwProfile),
         }
@@ -187,7 +187,7 @@ impl From<ProfileFirewallWindows> for i32 {
 }
 
 /// Represents the possible firewall actions in Windows
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ActionFirewallWindows {
     /// Block network traffic
     Block,
@@ -204,9 +204,9 @@ impl TryFrom<NET_FW_ACTION> for ActionFirewallWindows {
     fn try_from(action: NET_FW_ACTION) -> Result<Self, WindowsFirewallError> {
         match action {
             // Convert action value to the corresponding enum variant
-            NET_FW_ACTION_BLOCK => Ok(ActionFirewallWindows::Block),
-            NET_FW_ACTION_ALLOW => Ok(ActionFirewallWindows::Allow),
-            NET_FW_ACTION_MAX => Ok(ActionFirewallWindows::Max),
+            NET_FW_ACTION_BLOCK => Ok(Self::Block),
+            NET_FW_ACTION_ALLOW => Ok(Self::Allow),
+            NET_FW_ACTION_MAX => Ok(Self::Max),
             // Return an error if the value is not recognized
             _ => Err(WindowsFirewallError::InvalidNetFwAction),
         }
@@ -243,11 +243,11 @@ impl FromStr for InterfaceTypes {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Wireless" => Ok(InterfaceTypes::Wireless),
-            "Lan" => Ok(InterfaceTypes::Lan),
-            "RemoteAccess" => Ok(InterfaceTypes::RemoteAccess),
-            "All" => Ok(InterfaceTypes::All),
-            _ => Err(format!("Invalid interface type: {}", s)),
+            "Wireless" => Ok(Self::Wireless),
+            "Lan" => Ok(Self::Lan),
+            "RemoteAccess" => Ok(Self::RemoteAccess),
+            "All" => Ok(Self::All),
+            _ => Err(format!("Invalid interface type: {s}")),
         }
     }
 }
@@ -255,11 +255,11 @@ impl FromStr for InterfaceTypes {
 impl fmt::Display for InterfaceTypes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            InterfaceTypes::Wireless => "Wireless",
-            InterfaceTypes::Lan => "Lan",
-            InterfaceTypes::RemoteAccess => "RemoteAccess",
-            InterfaceTypes::All => "All",
+            Self::Wireless => "Wireless",
+            Self::Lan => "Lan",
+            Self::RemoteAccess => "RemoteAccess",
+            Self::All => "All",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
