@@ -395,87 +395,87 @@ impl WindowsFirewallRule {
     }
 
     /// Returns the direction of the firewall rule (inbound or outbound)
-    pub const fn direction(&self) -> &DirectionFirewallWindows {
+    pub fn direction(&self) -> &DirectionFirewallWindows {
         &self.direction
     }
 
     /// Returns whether the firewall rule is enabled or not
-    pub const fn enabled(&self) -> bool {
+    pub fn enabled(&self) -> bool {
         self.enabled
     }
 
     /// Returns the action to be taken by the firewall rule (allow/block)
-    pub const fn action(&self) -> &ActionFirewallWindows {
+    pub fn action(&self) -> &ActionFirewallWindows {
         &self.action
     }
 
     /// Returns the description of the firewall rule, if available
-    pub const fn description(&self) -> Option<&String> {
+    pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }
 
     /// Returns the application name associated with the firewall rule, if available
-    pub const fn application_name(&self) -> Option<&String> {
+    pub fn application_name(&self) -> Option<&String> {
         self.application_name.as_ref()
     }
 
     /// Returns the service name associated with the firewall rule, if available
-    pub const fn service_name(&self) -> Option<&String> {
+    pub fn service_name(&self) -> Option<&String> {
         self.service_name.as_ref()
     }
 
     /// Returns the protocol used by the firewall rule, if available
-    pub const fn protocol(&self) -> Option<&ProtocolFirewallWindows> {
+    pub fn protocol(&self) -> Option<&ProtocolFirewallWindows> {
         self.protocol.as_ref()
     }
 
     /// Returns the set of local ports associated with the firewall rule, if available
-    pub const fn local_ports(&self) -> Option<&HashSet<u16>> {
+    pub fn local_ports(&self) -> Option<&HashSet<u16>> {
         self.local_ports.as_ref()
     }
 
     /// Returns the set of remote ports associated with the firewall rule, if available
-    pub const fn remote_ports(&self) -> Option<&HashSet<u16>> {
+    pub fn remote_ports(&self) -> Option<&HashSet<u16>> {
         self.remote_ports.as_ref()
     }
 
     /// Returns the set of local addresses associated with the firewall rule, if available
-    pub const fn local_addresses(&self) -> Option<&HashSet<IpAddr>> {
+    pub fn local_addresses(&self) -> Option<&HashSet<IpAddr>> {
         self.local_addresses.as_ref()
     }
 
     /// Returns the set of remote addresses associated with the firewall rule, if available
-    pub const fn remote_addresses(&self) -> Option<&HashSet<IpAddr>> {
+    pub fn remote_addresses(&self) -> Option<&HashSet<IpAddr>> {
         self.remote_addresses.as_ref()
     }
 
     /// Returns the ICMP types and codes associated with the rule, if available
-    pub const fn icmp_types_and_codes(&self) -> Option<&String> {
+    pub fn icmp_types_and_codes(&self) -> Option<&String> {
         self.icmp_types_and_codes.as_ref()
     }
 
     /// Returns the set of interfaces associated with the firewall rule, if available
-    pub const fn interfaces(&self) -> Option<&HashSet<String>> {
+    pub fn interfaces(&self) -> Option<&HashSet<String>> {
         self.interfaces.as_ref()
     }
 
     /// Returns the set of interface types associated with the firewall rule, if available
-    pub const fn interface_types(&self) -> Option<&HashSet<InterfaceTypes>> {
+    pub fn interface_types(&self) -> Option<&HashSet<InterfaceTypes>> {
         self.interface_types.as_ref()
     }
 
     /// Returns the grouping of the rule, if available
-    pub const fn grouping(&self) -> Option<&String> {
+    pub fn grouping(&self) -> Option<&String> {
         self.grouping.as_ref()
     }
 
     /// Returns the profiles associated with the firewall rule, if available
-    pub const fn profiles(&self) -> Option<&ProfileFirewallWindows> {
+    pub fn profiles(&self) -> Option<&ProfileFirewallWindows> {
         self.profiles.as_ref()
     }
 
     /// Returns whether edge traversal is allowed by the rule
-    pub const fn edge_traversal(&self) -> Option<bool> {
+    pub fn edge_traversal(&self) -> Option<bool> {
         self.edge_traversal
     }
 }
