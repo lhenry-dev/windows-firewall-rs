@@ -28,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --all-features
       - run: cargo test --all-features -- --ignored
 
   fmt:
@@ -92,10 +93,3 @@ jobs:
         run: cargo install cargo-msrv
       - name: Verify Minimum Supported Rust Version
         run: cargo msrv verify
-
-  test2test:
-    runs-on: windows-latest
-    steps:
-      - name: List network interfaces
-        run: |
-          powershell -Command "Get-NetAdapter | Select-Object -ExpandProperty Name"
