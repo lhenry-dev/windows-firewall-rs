@@ -787,7 +787,7 @@ fn test_update_firewall_rule_with_all_parameters() {
 #[test]
 #[serial]
 #[ignore]
-fn test_icmpv4_firewall_rule_conversion_complete() {
+fn test_icmpv4_firewall_rule_conversion_complete_for_github_actions() {
     let rule_action = ActionFirewallWindows::Allow;
     let rule_direction = DirectionFirewallWindows::In;
     let rule_enabled = true;
@@ -804,7 +804,7 @@ fn test_icmpv4_firewall_rule_conversion_complete() {
         IpAddr::from_str("10.0.0.2").unwrap(),
     ];
     let rule_icmp_types_and_codes = "8:0";
-    let rule_interfaces = ["Wi-Fi"];
+    let rule_interfaces = ["Ethernet"];
     let rule_interface_types = [Wireless, Lan];
     let rule_grouping = "Group A";
     let rule_profiles = ProfileFirewallWindows::Private;
@@ -876,7 +876,7 @@ fn test_icmpv4_firewall_rule_conversion_complete() {
 #[test]
 #[serial]
 #[ignore]
-fn test_tcp_windows_firewall_rule_conversion_complete() {
+fn test_tcp_windows_firewall_rule_conversion_complete_for_github_actions() {
     let rule_action = ActionFirewallWindows::Allow;
     let rule_direction = DirectionFirewallWindows::In;
     let rule_enabled = true;
@@ -894,7 +894,7 @@ fn test_tcp_windows_firewall_rule_conversion_complete() {
         IpAddr::from_str("10.0.0.1").unwrap(),
         IpAddr::from_str("10.0.0.2").unwrap(),
     ];
-    let rule_interfaces = ["Wi-Fi"];
+    let rule_interfaces = ["Ethernet"];
     let rule_interface_types = [Wireless, Lan];
     let rule_grouping = "Group A";
     let rule_profiles = ProfileFirewallWindows::Private;
