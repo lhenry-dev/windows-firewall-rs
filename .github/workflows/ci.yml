@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  push:
   pull_request:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
   schedule: [cron: "40 1 * * *"]
 
 permissions:
@@ -91,21 +92,3 @@ jobs:
         run: cargo install cargo-msrv
       - name: Verify Minimum Supported Rust Version
         run: cargo msrv verify
-
-  coverage:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install llvm-tools-preview
-        run: rustup component add llvm-tools-preview
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-      - name: Create coverage file
-        run: cargo llvm-cov --ignore-filename-regex "main.rs|firewall_enums.rs" --lcov --output-path lcov.info
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
-          fail_ci_if_error: true

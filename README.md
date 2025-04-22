@@ -4,6 +4,9 @@
   <a href="https://crates.io/crates/windows_firewall">
     <img src="https://img.shields.io/crates/v/windows_firewall" alt="Crates.io">
   </a>
+  <a href="https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/ci.yml?query=branch%3Amain">
+    <img src="https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/ci.yml?branch=main" alt="Build Status">
+  </a>
   <a href="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs">
     <img src="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs/status.svg" alt="dependency status">
   </a>
@@ -15,6 +18,9 @@
   </a>
   <a href="https://github.com/rust-lang/rust/releases/tag/1.78.0">
     <img src="https://img.shields.io/badge/MSRV-1.78.0-dea584.svg?logo=rust)" alt="MSRV">
+  </a>
+  <a href="https://codecov.io/gh/lhenry-dev/windows-firewall-rs" >
+    <img src="https://codecov.io/gh/lhenry-dev/windows-firewall-rs/graph/badge.svg?token=3M3WXGC4KW" alt="Code Coverage">
   </a>
 </p>
 
