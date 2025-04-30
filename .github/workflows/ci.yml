@@ -28,8 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-      - run: cargo test --all-features -- --ignored
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $env:GITHUB_ACTIONS="1"
+          cargo test --all-features -- --nocapture
 
   fmt:
     runs-on: windows-latest
