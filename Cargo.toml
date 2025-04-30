@@ -1,6 +1,6 @@
 [package]
 name = "windows_firewall"
-authors = ["lhenry-dev"]
+authors = ["lhenry-dev <lhenry.dev1@gmail.com>"]
 version = "0.1.2"
 edition = "2021"
 rust-version = "1.78"
@@ -10,6 +10,8 @@ keywords = ["windows", "ffi", "win32", "com", "firewall"]
 categories = ["external-ffi-bindings", "os::windows-apis"]
 readme = "README.md"
 repository = "https://github.com/lhenry-dev/windows-firewall-rs"
+documentation = "https://docs.rs/windows_firewall/latest/windows_firewall/"
+homepage = "https://crates.io/crates/windows_firewall"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"

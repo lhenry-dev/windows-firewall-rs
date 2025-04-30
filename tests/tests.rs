@@ -189,6 +189,37 @@ fn test_add_rule_if_not_exists() {
 
 #[test]
 #[serial]
+fn test_add_rule_if_not_exists_2() {
+    let rule = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true)
+        .description("Allow inbound HTTP traffic")
+        .protocol(ProtocolFirewallWindows::Tcp)
+        .local_ports([80])
+        .build();
+
+    let _ = rule.clone().remove();
+
+    let added = rule
+        .add_if_not_exists()
+        .expect("Failed to add rule if not exists");
+    assert!(added, "Rule should be added because it did not exist");
+
+    let added_again = rule
+        .add_if_not_exists()
+        .expect("Failed to call add_rule_if_not_exists");
+    assert!(
+        !added_again,
+        "Rule should not be added again if it already exists"
+    );
+
+    remove_rule(RULE_NAME).expect("Failed to remove rule after test");
+}
+
+#[test]
+#[serial]
 fn test_firewall_rule_operations_2() {
     let mut rule = WindowsFirewallRule::builder()
         .name(RULE_NAME)
@@ -270,7 +301,7 @@ fn test_firewall_rule_update_2() {
         .local_ports([80, 65535])
         .build();
 
-    add_rule(&rule).expect("Failed to add firewall rule");
+    rule.add().expect("Failed to add firewall rule");
 
     let res_exist = rule_exists(RULE_NAME).expect("Failed to check if rule exists");
     assert!(res_exist, "The rule should exist after being added");
@@ -284,7 +315,7 @@ fn test_firewall_rule_update_2() {
     rule.update(&settings)
         .expect("Failed to update firewall rule");
 
-    let res_exist = rule_exists(new_rule_name).expect("Failed to check if rule exists");
+    let res_exist = rule.exists().expect("Failed to check if rule exists");
     assert!(res_exist, "The rule should exist after being updated");
 
     remove_rule(new_rule_name).expect("Failed to remove firewall rule");
@@ -786,8 +817,12 @@ fn test_update_firewall_rule_with_all_parameters() {
 
 #[test]
 #[serial]
-#[ignore]
 fn test_icmpv4_firewall_rule_conversion_complete_for_github_actions() {
+    if std::env::var("GITHUB_ACTIONS").unwrap_or_default() != "1" {
+        eprintln!("Test ignoré : définir GITHUB_ACTIONS=1 pour l'exécuter.");
+        return;
+    }
+
     let rule_action = ActionFirewallWindows::Allow;
     let rule_direction = DirectionFirewallWindows::In;
     let rule_enabled = true;
@@ -875,8 +910,12 @@ fn test_icmpv4_firewall_rule_conversion_complete_for_github_actions() {
 
 #[test]
 #[serial]
-#[ignore]
 fn test_tcp_windows_firewall_rule_conversion_complete_for_github_actions() {
+    if std::env::var("GITHUB_ACTIONS").unwrap_or_default() != "1" {
+        eprintln!("Test ignoré : définir GITHUB_ACTIONS=1 pour l'exécuter.");
+        return;
+    }
+
     let rule_action = ActionFirewallWindows::Allow;
     let rule_direction = DirectionFirewallWindows::In;
     let rule_enabled = true;
@@ -900,7 +939,7 @@ fn test_tcp_windows_firewall_rule_conversion_complete_for_github_actions() {
     let rule_profiles = ProfileFirewallWindows::Private;
     let rule_edge_traversal = false;
 
-    let rule = WindowsFirewallRule::builder()
+    let mut rule = WindowsFirewallRule::builder()
         .name(RULE_NAME)
         .action(rule_action)
         .direction(rule_direction)
@@ -957,6 +996,15 @@ fn test_tcp_windows_firewall_rule_conversion_complete_for_github_actions() {
     assert_eq!(result.grouping(), Some(&rule_grouping.to_string()));
     assert_eq!(result.profiles(), Some(rule_profiles).as_ref());
     assert_eq!(result.edge_traversal(), Some(rule_edge_traversal));
+
+    let interface_update = WindowsFirewallRuleSettings::builder()
+        .interfaces(rule_interfaces)
+        .build();
+
+    rule.update(&interface_update)
+        .expect("Failed to update TCP firewall rule");
+
+    assert_eq!(rule.interfaces(), Some(&to_string_hashset(rule_interfaces)));
 
     remove_rule(RULE_NAME).expect("Failed to remove TCP firewall rule");
     assert!(!rule_exists(RULE_NAME).unwrap());
