@@ -7,8 +7,8 @@
   <a href="https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/ci.yml?query=branch%3Amain">
     <img src="https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/ci.yml?branch=main" alt="Build Status">
   </a>
-  <a href="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs">
-    <img src="https://deps.rs/repo/github/lhenry-dev/Windows-Firewall-rs/status.svg" alt="dependency status">
+  <a href="https://deps.rs/crate/windows_firewall/">
+    <img src="https://deps.rs/crate/windows_firewall/latest/status.svg" alt="dependency status">
   </a>
   <a href="https://docs.rs/windows_firewall">
     <img src="https://docs.rs/windows_firewall/badge.svg" alt="Documentation">
