@@ -17,7 +17,7 @@ use crate::utils::{
     convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, to_string_hashset,
     variant_to_hashset, with_com_initialized,
 };
-use crate::windows_firewall::{remove_rule, rule_exists, update_rule};
+use crate::windows_firewall::{add_or_update, remove_rule, rule_exists, update_rule};
 use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, InterfaceTypes};
 
 /// Represents a rule in the Windows Firewall.
@@ -193,6 +193,37 @@ impl WindowsFirewallRule {
     /// ⚠️ This function requires **administrative privileges**.
     pub fn add_if_not_exists(&self) -> Result<bool, WindowsFirewallError> {
         add_rule_if_not_exists(self)
+    }
+
+    /// Adds a new firewall rule to the system or updates an existing rule with the same name.
+    ///
+    /// This function first checks if a rule with the given name exists. If it does, the function updates
+    /// the existing rule with the new settings. If the rule does not exist, it adds a new rule to the
+    /// Windows Firewall.
+    ///
+    /// # Arguments
+    ///
+    /// This function does not take any arguments, as it operates on the current instance's fields.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added
+    /// or updated successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
+    /// In case of an error (e.g., COM initialization failure, failure to add or update the rule), it returns a
+    /// [`WindowsFirewallError`].
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+    /// - Fetching the existing rule or adding the new rule.
+    /// - Updating the firewall rule.
+    ///
+    /// # Security
+    ///
+    /// ⚠️ This function requires **administrative privileges**.
+    pub fn add_or_update(&self) -> Result<bool, WindowsFirewallError> {
+        add_or_update(self)
     }
 
     /// Deletes an existing firewall rule from the system.
@@ -694,4 +725,29 @@ pub struct WindowsFirewallRuleSettings {
     /// Indicates whether edge traversal is allowed by the rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) edge_traversal: Option<bool>,
+}
+
+impl From<WindowsFirewallRule> for WindowsFirewallRuleSettings {
+    fn from(rule: WindowsFirewallRule) -> Self {
+        WindowsFirewallRuleSettings {
+            name: Some(rule.name),
+            direction: Some(rule.direction),
+            enabled: Some(rule.enabled),
+            action: Some(rule.action),
+            description: rule.description,
+            application_name: rule.application_name,
+            service_name: rule.service_name,
+            protocol: rule.protocol,
+            local_ports: rule.local_ports,
+            remote_ports: rule.remote_ports,
+            local_addresses: rule.local_addresses,
+            remote_addresses: rule.remote_addresses,
+            icmp_types_and_codes: rule.icmp_types_and_codes,
+            interfaces: rule.interfaces,
+            interface_types: rule.interface_types,
+            grouping: rule.grouping,
+            profiles: rule.profiles,
+            edge_traversal: rule.edge_traversal,
+        }
+    }
 }

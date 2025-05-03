@@ -152,14 +152,72 @@ pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> 
 ///
 /// ⚠️ This function requires **administrative privileges**.
 pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
-    let rule_name = rule.name();
+    with_com_initialized(|| unsafe {
+        let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
-    if rule_exists(rule_name)? {
-        Ok(false)
-    } else {
-        add_rule(rule)?;
+        let fw_rules: INetFwRules = fw_policy.Rules()?;
+
+        let rule_name = BSTR::from(rule.name());
+        let exist = fw_rules.Item(&rule_name).is_ok();
+
+        if exist {
+            return Ok(false);
+        }
+
+        let new_rule: INetFwRule = rule.try_into()?;
+
+        fw_rules.Add(&new_rule)?;
+
         Ok(true)
-    }
+    })
+}
+
+/// Adds a new firewall rule to the system or updates an existing rule with the same name.
+///
+/// This function first checks if a rule with the given name exists. If it does, the function updates
+/// the existing rule with the new settings. If the rule does not exist, it adds a new rule to the
+/// Windows Firewall.
+///
+/// # Arguments
+///
+/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add or update.
+///
+/// # Returns
+///
+/// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added
+/// or updated successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
+/// In case of an error (e.g., COM initialization failure, failure to add or update the rule), it returns a
+/// [`WindowsFirewallError`].
+///
+/// # Errors
+///
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+/// - Fetching the existing rule or adding the new rule.
+/// - Updating the firewall rule.
+///
+/// # Security
+///
+/// ⚠️ This function requires **administrative privileges**.
+pub fn add_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
+    with_com_initialized(|| unsafe {
+        let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
+        let fw_rules: INetFwRules = fw_policy.Rules()?;
+
+        let rule_name = BSTR::from(rule.name());
+        let fw_rule_result = fw_rules.Item(&rule_name);
+
+        if let Ok(existing_rule) = fw_rule_result {
+            let settings = rule.clone().into();
+            update_inetfw_rule(&existing_rule, &settings)?;
+            return Ok(false);
+        }
+
+        let new_rule: INetFwRule = rule.try_into()?;
+        fw_rules.Add(&new_rule)?;
+
+        Ok(true)
+    })
 }
 
 /// Updates an existing firewall rule with new settings.
@@ -199,74 +257,83 @@ pub fn update_rule(
         let rule_name = BSTR::from(rule_name);
         let rule = fw_rules.Item(&rule_name)?;
 
-        let is_icmp = matches!(
-            &settings.protocol,
-            Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
-        );
-
-        if let Some(name) = &settings.name {
-            rule.SetName(&BSTR::from(name))?;
-        }
-        if let Some(direction) = settings.direction {
-            rule.SetDirection(direction.into())?;
-        }
-        if let Some(enabled) = settings.enabled {
-            rule.SetEnabled(enabled.into())?;
-        }
-        if let Some(action) = settings.action {
-            rule.SetAction(action.into())?;
-        }
-        if let Some(description) = &settings.description {
-            rule.SetDescription(&BSTR::from(description))?;
-        }
-        if let Some(application_name) = &settings.application_name {
-            rule.SetApplicationName(&BSTR::from(application_name))?;
-        }
-        if let Some(service_name) = &settings.service_name {
-            rule.SetServiceName(&BSTR::from(service_name))?;
-        }
-        if let Some(protocol) = settings.protocol {
-            if is_icmp {
-                rule.SetLocalPorts(&BSTR::from(""))?;
-                rule.SetRemotePorts(&BSTR::from(""))?;
-            } else {
-                rule.SetIcmpTypesAndCodes(&BSTR::from(""))?;
-            }
-            rule.SetProtocol(protocol.into())?;
-        }
-        if let Some(local_ports) = &settings.local_ports {
-            rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))?;
-        }
-        if let Some(remote_ports) = &settings.remote_ports {
-            rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))?;
-        }
-        if let Some(local_addresses) = &settings.local_addresses {
-            rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))?;
-        }
-        if let Some(remote_addresses) = &settings.remote_addresses {
-            rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))?;
-        }
-        if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-            rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))?;
-        }
-        if let Some(edge_traversal) = settings.edge_traversal {
-            rule.SetEdgeTraversal(edge_traversal.into())?;
-        }
-        if let Some(grouping) = &settings.grouping {
-            rule.SetGrouping(&BSTR::from(grouping))?;
-        }
-        if let Some(interfaces) = &settings.interfaces {
-            rule.SetInterfaces(&hashset_to_variant(interfaces)?)?;
-        }
-        if let Some(interface_types) = &settings.interface_types {
-            rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))?;
-        }
-        if let Some(profiles) = settings.profiles {
-            rule.SetProfiles(profiles.into())?;
-        }
+        update_inetfw_rule(&rule, settings)?;
 
         Ok(())
     })
+}
+
+unsafe fn update_inetfw_rule(
+    rule: &INetFwRule,
+    settings: &WindowsFirewallRuleSettings,
+) -> Result<(), windows::core::Error> {
+    let is_icmp = matches!(
+        settings.protocol,
+        Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
+    );
+
+    if let Some(name) = &settings.name {
+        rule.SetName(&BSTR::from(name))?;
+    }
+    if let Some(direction) = settings.direction {
+        rule.SetDirection(direction.into())?;
+    }
+    if let Some(enabled) = settings.enabled {
+        rule.SetEnabled(enabled.into())?;
+    }
+    if let Some(action) = settings.action {
+        rule.SetAction(action.into())?;
+    }
+    if let Some(description) = &settings.description {
+        rule.SetDescription(&BSTR::from(description))?;
+    }
+    if let Some(application_name) = &settings.application_name {
+        rule.SetApplicationName(&BSTR::from(application_name))?;
+    }
+    if let Some(service_name) = &settings.service_name {
+        rule.SetServiceName(&BSTR::from(service_name))?;
+    }
+    if let Some(protocol) = settings.protocol {
+        if is_icmp {
+            rule.SetLocalPorts(&BSTR::from(""))?;
+            rule.SetRemotePorts(&BSTR::from(""))?;
+        } else {
+            rule.SetIcmpTypesAndCodes(&BSTR::from(""))?;
+        }
+        rule.SetProtocol(protocol.into())?;
+    }
+    if let Some(local_ports) = &settings.local_ports {
+        rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))?;
+    }
+    if let Some(remote_ports) = &settings.remote_ports {
+        rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))?;
+    }
+    if let Some(local_addresses) = &settings.local_addresses {
+        rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))?;
+    }
+    if let Some(remote_addresses) = &settings.remote_addresses {
+        rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))?;
+    }
+    if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
+        rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))?;
+    }
+    if let Some(edge_traversal) = settings.edge_traversal {
+        rule.SetEdgeTraversal(edge_traversal.into())?;
+    }
+    if let Some(grouping) = &settings.grouping {
+        rule.SetGrouping(&BSTR::from(grouping))?;
+    }
+    if let Some(interfaces) = &settings.interfaces {
+        rule.SetInterfaces(&hashset_to_variant(interfaces)?)?;
+    }
+    if let Some(interface_types) = &settings.interface_types {
+        rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))?;
+    }
+    if let Some(profiles) = settings.profiles {
+        rule.SetProfiles(profiles.into())?;
+    }
+
+    Ok(())
 }
 
 /// Disables an existing firewall rule.

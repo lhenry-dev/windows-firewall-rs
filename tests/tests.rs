@@ -817,6 +817,106 @@ fn test_update_firewall_rule_with_all_parameters() {
 
 #[test]
 #[serial]
+fn test_add_or_update_with_all_parameters() {
+    let rule = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true)
+        .description("Allow inbound ICMPv4 traffic")
+        .application_name("C:\\Program Files\\MyApp\\app.exe")
+        .service_name("MyService")
+        .protocol(ProtocolFirewallWindows::Icmpv4)
+        .local_addresses([
+            IpAddr::from_str("192.168.1.1").unwrap(),
+            IpAddr::from_str("192.168.1.2").unwrap(),
+        ])
+        .remote_addresses([
+            IpAddr::from_str("10.0.0.1").unwrap(),
+            IpAddr::from_str("10.0.0.2").unwrap(),
+        ])
+        .icmp_types_and_codes("8:0")
+        .interface_types([Wireless, Lan])
+        .grouping("Group A")
+        .profiles(ProfileFirewallWindows::Private)
+        .edge_traversal(false)
+        .build();
+
+    let add_or_update = rule
+        .add_or_update()
+        .expect("Failed to add or update full parameter firewall rule");
+
+    assert!(add_or_update, "Rule should be added");
+    assert!(rule_exists(RULE_NAME).expect("Failed to check rule existence"));
+
+    let updated_settings = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Block)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(false)
+        .description("Block outbound TCP traffic")
+        .application_name("C:\\Program Files\\NewApp\\new_app.exe")
+        .service_name("NewService")
+        .protocol(ProtocolFirewallWindows::Tcp)
+        .local_ports([443, 8443])
+        .remote_ports([80, 8080])
+        .local_addresses([IpAddr::from_str("172.16.0.1").unwrap()])
+        .remote_addresses([IpAddr::from_str("1.1.1.1").unwrap()])
+        .interface_types([Lan])
+        .grouping("Group B")
+        .profiles(ProfileFirewallWindows::Public)
+        .edge_traversal(true)
+        .build();
+
+    let add_or_update = updated_settings
+        .add_or_update()
+        .expect("Failed to add or update full parameter firewall rule");
+    assert!(!add_or_update, "Rule should be updated");
+
+    let updated_rule = get_rule(RULE_NAME).expect("Failed to get updated firewall rule");
+
+    assert_eq!(updated_rule.name(), RULE_NAME);
+    assert_eq!(updated_rule.action(), &ActionFirewallWindows::Block);
+    assert_eq!(updated_rule.direction(), &DirectionFirewallWindows::In);
+    assert!(!updated_rule.enabled());
+    assert_eq!(
+        updated_rule.description(),
+        Some(&"Block outbound TCP traffic".to_string())
+    );
+    assert_eq!(
+        updated_rule.application_name(),
+        Some(&"C:\\Program Files\\NewApp\\new_app.exe".to_string())
+    );
+    assert_eq!(updated_rule.service_name(), Some(&"NewService".to_string()));
+    assert_eq!(
+        updated_rule.protocol(),
+        Some(ProtocolFirewallWindows::Tcp).as_ref()
+    );
+    assert_eq!(updated_rule.local_ports(), Some(&to_hashset([443, 8443])));
+    assert_eq!(updated_rule.remote_ports(), Some(&to_hashset([80, 8080])));
+    assert_eq!(
+        updated_rule.local_addresses(),
+        Some(&to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
+    );
+    assert_eq!(
+        updated_rule.remote_addresses(),
+        Some(&to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
+    );
+    assert_eq!(updated_rule.icmp_types_and_codes(), None);
+    assert_eq!(updated_rule.interface_types(), Some(&to_hashset([Lan])));
+    assert_eq!(updated_rule.grouping(), Some(&"Group B".to_string()));
+    assert_eq!(
+        updated_rule.profiles(),
+        Some(ProfileFirewallWindows::Public).as_ref()
+    );
+    assert_eq!(updated_rule.edge_traversal(), Some(true));
+
+    remove_rule(RULE_NAME).expect("Failed to remove updated rule");
+    assert!(!rule_exists(RULE_NAME).expect("Failed to check if rule was removed"));
+}
+
+#[test]
+#[serial]
 fn test_icmpv4_firewall_rule_conversion_complete_for_github_actions() {
     if std::env::var("GITHUB_ACTIONS").unwrap_or_default() != "1" {
         eprintln!("Test ignoré : définir GITHUB_ACTIONS=1 pour l'exécuter.");
@@ -1008,4 +1108,115 @@ fn test_tcp_windows_firewall_rule_conversion_complete_for_github_actions() {
 
     remove_rule(RULE_NAME).expect("Failed to remove TCP firewall rule");
     assert!(!rule_exists(RULE_NAME).unwrap());
+}
+
+#[test]
+#[serial]
+fn test_add_or_update_with_all_parameters_for_github_action() {
+    if std::env::var("GITHUB_ACTIONS").unwrap_or_default() != "1" {
+        eprintln!("Test ignoré : définir GITHUB_ACTIONS=1 pour l'exécuter.");
+        return;
+    }
+
+    let rule = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true)
+        .description("Allow inbound ICMPv4 traffic")
+        .application_name("C:\\Program Files\\MyApp\\app.exe")
+        .service_name("MyService")
+        .protocol(ProtocolFirewallWindows::Icmpv4)
+        .local_addresses([
+            IpAddr::from_str("192.168.1.1").unwrap(),
+            IpAddr::from_str("192.168.1.2").unwrap(),
+        ])
+        .remote_addresses([
+            IpAddr::from_str("10.0.0.1").unwrap(),
+            IpAddr::from_str("10.0.0.2").unwrap(),
+        ])
+        .icmp_types_and_codes("8:0")
+        .interface_types([Wireless, Lan])
+        .interfaces(["Ethernet"])
+        .grouping("Group A")
+        .profiles(ProfileFirewallWindows::Private)
+        .edge_traversal(false)
+        .build();
+
+    let add_or_update = rule
+        .add_or_update()
+        .expect("Failed to add or update full parameter firewall rule");
+
+    assert!(add_or_update, "Rule should be added");
+    assert!(rule_exists(RULE_NAME).expect("Failed to check rule existence"));
+
+    let updated_settings = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Block)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(false)
+        .description("Block outbound TCP traffic")
+        .application_name("C:\\Program Files\\NewApp\\new_app.exe")
+        .service_name("NewService")
+        .protocol(ProtocolFirewallWindows::Tcp)
+        .local_ports([443, 8443])
+        .remote_ports([80, 8080])
+        .local_addresses([IpAddr::from_str("172.16.0.1").unwrap()])
+        .remote_addresses([IpAddr::from_str("1.1.1.1").unwrap()])
+        .interface_types([Lan])
+        .interfaces(["Ethernet"])
+        .grouping("Group B")
+        .profiles(ProfileFirewallWindows::Public)
+        .edge_traversal(true)
+        .build();
+
+    let add_or_update = updated_settings
+        .add_or_update()
+        .expect("Failed to add or update full parameter firewall rule");
+    assert!(!add_or_update, "Rule should be updated");
+
+    let updated_rule = get_rule(RULE_NAME).expect("Failed to get updated firewall rule");
+
+    assert_eq!(updated_rule.name(), RULE_NAME);
+    assert_eq!(updated_rule.action(), &ActionFirewallWindows::Block);
+    assert_eq!(updated_rule.direction(), &DirectionFirewallWindows::In);
+    assert!(!updated_rule.enabled());
+    assert_eq!(
+        updated_rule.description(),
+        Some(&"Block outbound TCP traffic".to_string())
+    );
+    assert_eq!(
+        updated_rule.application_name(),
+        Some(&"C:\\Program Files\\NewApp\\new_app.exe".to_string())
+    );
+    assert_eq!(updated_rule.service_name(), Some(&"NewService".to_string()));
+    assert_eq!(
+        updated_rule.protocol(),
+        Some(ProtocolFirewallWindows::Tcp).as_ref()
+    );
+    assert_eq!(updated_rule.local_ports(), Some(&to_hashset([443, 8443])));
+    assert_eq!(updated_rule.remote_ports(), Some(&to_hashset([80, 8080])));
+    assert_eq!(
+        updated_rule.local_addresses(),
+        Some(&to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
+    );
+    assert_eq!(
+        updated_rule.remote_addresses(),
+        Some(&to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
+    );
+    assert_eq!(updated_rule.icmp_types_and_codes(), None);
+    assert_eq!(updated_rule.interface_types(), Some(&to_hashset([Lan])));
+    assert_eq!(
+        updated_rule.interfaces(),
+        Some(&to_string_hashset(["Ethernet"]))
+    );
+    assert_eq!(updated_rule.grouping(), Some(&"Group B".to_string()));
+    assert_eq!(
+        updated_rule.profiles(),
+        Some(ProfileFirewallWindows::Public).as_ref()
+    );
+    assert_eq!(updated_rule.edge_traversal(), Some(true));
+
+    remove_rule(RULE_NAME).expect("Failed to remove updated rule");
+    assert!(!rule_exists(RULE_NAME).expect("Failed to check if rule was removed"));
 }
