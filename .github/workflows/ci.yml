@@ -13,9 +13,17 @@ permissions:
 jobs:
   check:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.toolchain}}
       - name: No features
         run: cargo check --no-default-features
       - name: All features
@@ -25,9 +33,17 @@ jobs:
 
   test:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.toolchain}}
       - name: Run tests
         shell: pwsh
         run: |
