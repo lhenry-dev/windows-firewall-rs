@@ -383,13 +383,13 @@ impl WindowsFirewallRule {
     ///
     /// ⚠️ This function requires **administrative privileges**.
     pub fn disable(&mut self, disable: bool) -> Result<(), WindowsFirewallError> {
-        if disable {
-            disable_rule(&self.name)?;
-            self.enabled = false;
-        } else {
-            enable_rule(&self.name)?;
-            self.enabled = true;
-        }
+        let action = match disable {
+            true => disable_rule,
+            false => enable_rule,
+        };
+
+        action(&self.name)?;
+        self.enabled = !disable;
         Ok(())
     }
 
