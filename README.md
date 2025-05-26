@@ -12,7 +12,7 @@
 
 ---
 
-**A Rust crate for managing Windows Firewall rules and settings via the native Windows API.**
+**A Rust crate for managing Windows Firewall rules and settings using the Windows API in Rust.**
 
 </div>
 
