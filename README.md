@@ -1,32 +1,20 @@
-<h1 align="center">Windows Firewall</h1>
+<div align="center">
 
-<p align="center">
-  <a href="https://crates.io/crates/windows_firewall">
-    <img src="https://img.shields.io/crates/v/windows_firewall" alt="Crates.io">
-  </a>
-  <a href="https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/ci.yml?query=branch%3Amain">
-    <img src="https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/ci.yml?branch=main" alt="Build Status">
-  </a>
-  <a href="https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs">
-    <img src="https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs/status.svg" alt="dependency status">
-  </a>
-  <a href="https://docs.rs/windows_firewall">
-    <img src="https://docs.rs/windows_firewall/badge.svg" alt="Documentation">
-  </a>
-  <a href="https://crates.io/crates/windows_firewall">
-    <img src="https://img.shields.io/crates/l/windows_firewall" alt="License">
-  </a>
-  <a href="https://github.com/rust-lang/rust/releases/tag/1.78.0">
-    <img src="https://img.shields.io/badge/MSRV-1.78.0-dea584.svg?logo=rust)" alt="MSRV">
-  </a>
-  <a href="https://codecov.io/gh/lhenry-dev/windows-firewall-rs" >
-    <img src="https://codecov.io/gh/lhenry-dev/windows-firewall-rs/graph/badge.svg?token=3M3WXGC4KW" alt="Code Coverage">
-  </a>
-</p>
+<h1>Windows Firewall</h1>
 
-<p align="center">
-  A Rust crate for managing Windows Firewall rules and settings using the Windows API in Rust.
-</p>
+[![Crates.io](https://img.shields.io/crates/v/windows_firewall)](https://crates.io/crates/windows_firewall)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/ci.yml?branch=main)](https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/ci.yml?branch=main)
+[![Dependency Status](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs/status.svg)](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs)
+[![Documentation](https://docs.rs/windows_firewall/badge.svg)](https://docs.rs/windows_firewall)
+[![License](https://img.shields.io/crates/l/windows_firewall)](https://crates.io/crates/windows_firewall)
+[![MSRV](https://img.shields.io/badge/MSRV-1.78.0-dea584.svg?logo=rust)](https://github.com/rust-lang/rust/releases/tag/1.78.0)
+[![Code Coverage](https://codecov.io/gh/lhenry-dev/windows-firewall-rs/graph/badge.svg?token=3M3WXGC4KW)](https://codecov.io/gh/lhenry-dev/windows-firewall-rs)
+
+---
+
+**A Rust crate for managing Windows Firewall rules and settings via the native Windows API.**
+
+</div>
 
 ## Features
 
