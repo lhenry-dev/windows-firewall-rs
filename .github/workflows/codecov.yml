@@ -16,10 +16,7 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
       - name: Create coverage file
-        shell: pwsh
-        run: |
-          $env:GITHUB_ACTIONS = "1"
-          cargo llvm-cov --ignore-filename-regex firewall_enums.rs --lcov --output-path lcov.info
+        run : cargo llvm-cov --ignore-filename-regex firewall_enums.rs --lcov --output-path lcov.info
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:

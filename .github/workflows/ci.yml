@@ -45,10 +45,7 @@ jobs:
         with:
           toolchain: ${{matrix.toolchain}}
       - name: Run tests
-        shell: pwsh
-        run: |
-          $env:GITHUB_ACTIONS="1"
-          cargo test --all-features -- --nocapture
+        run : cargo test --all-features -- --nocapture
 
   fmt:
     runs-on: windows-latest
