@@ -924,7 +924,7 @@ fn test_windows_firewall_rule_per_network_interface() {
 
     for adapter in adapters {
         let interface_name = adapter.friendly_name();
-        let rule_name = format!("{}_{}", RULE_NAME, interface_name);
+        let rule_name = format!("{RULE_NAME}_{interface_name}");
 
         let rule = WindowsFirewallRule::builder()
             .name(&rule_name)
@@ -934,7 +934,7 @@ fn test_windows_firewall_rule_per_network_interface() {
             .interfaces([interface_name])
             .build();
 
-        println!("Adding rule for interface: {}", interface_name);
+        println!("Adding rule for interface: {interface_name}");
 
         rule.add().expect("Failed to add rule");
 
@@ -961,7 +961,7 @@ fn test_windows_firewall_rule_update_per_network_interface() {
 
     for adapter in adapters {
         let interface_name = adapter.friendly_name();
-        let rule_name = format!("{}_{}", RULE_NAME, interface_name);
+        let rule_name = format!("{RULE_NAME}_{interface_name}");
 
         let mut rule = WindowsFirewallRule::builder()
             .name(&rule_name)
@@ -978,7 +978,7 @@ fn test_windows_firewall_rule_update_per_network_interface() {
             .interfaces([interface_name])
             .build();
 
-        println!("Updating rule for interface: {}", interface_name);
+        println!("Updating rule for interface: {interface_name}");
 
         rule.update(&updated_settings)
             .expect("Failed to update rule");

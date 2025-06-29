@@ -383,10 +383,7 @@ impl WindowsFirewallRule {
     ///
     /// ⚠️ This function requires **administrative privileges**.
     pub fn disable(&mut self, disable: bool) -> Result<(), WindowsFirewallError> {
-        let action = match disable {
-            true => disable_rule,
-            false => enable_rule,
-        };
+        let action = if disable { disable_rule } else { enable_rule };
 
         action(&self.name)?;
         self.enabled = !disable;
@@ -729,7 +726,7 @@ pub struct WindowsFirewallRuleSettings {
 
 impl From<WindowsFirewallRule> for WindowsFirewallRuleSettings {
     fn from(rule: WindowsFirewallRule) -> Self {
-        WindowsFirewallRuleSettings {
+        Self {
             name: Some(rule.name),
             direction: Some(rule.direction),
             enabled: Some(rule.enabled),
