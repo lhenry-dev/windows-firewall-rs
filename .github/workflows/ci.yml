@@ -12,13 +12,11 @@ permissions:
 
 jobs:
   check:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
+        os: [windows-latest, ubuntu-latest]
+        toolchain: [stable, beta, nightly]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -35,10 +33,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
+        toolchain: [stable, beta, nightly]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
