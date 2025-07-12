@@ -33,5 +33,5 @@ windows = { version = "0.61", features = [
 windows-result = "0.3"
 
 [dev-dependencies]
-serial_test = "3.2"
 ipconfig = "0.3"
+serial_test = "3.2"
