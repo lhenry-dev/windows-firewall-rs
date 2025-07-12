@@ -916,6 +916,103 @@ fn test_add_or_update_with_all_parameters() {
 }
 
 #[test]
+fn test_all_protocol_transitions() {
+    use windows_firewall::{
+        remove_rule, rule_exists, ActionFirewallWindows, DirectionFirewallWindows,
+        ProtocolFirewallWindows, WindowsFirewallRule,
+    };
+
+    let protocols = [
+        (ProtocolFirewallWindows::Tcp, "Tcp"),
+        (ProtocolFirewallWindows::Udp, "Udp"),
+        (ProtocolFirewallWindows::Icmpv4, "Icmpv4"),
+        (ProtocolFirewallWindows::Icmpv6, "Icmpv6"),
+        (ProtocolFirewallWindows::Igmp, "Igmp"),
+        (ProtocolFirewallWindows::Ipv4, "Ipv4"),
+        (ProtocolFirewallWindows::Ipv6, "Ipv6"),
+        (ProtocolFirewallWindows::Gre, "Gre"),
+        (ProtocolFirewallWindows::Esp, "Esp"),
+        (ProtocolFirewallWindows::Ah, "Ah"),
+        (ProtocolFirewallWindows::Sctp, "Sctp"),
+        (ProtocolFirewallWindows::Any, "Any"),
+    ];
+
+    for (proto_from, label_from) in &protocols {
+        for (proto_to, label_to) in &protocols {
+            let rule_name = format!("{RULE_NAME}_transition_{label_from}_to_{label_to}");
+
+            let base_builder = WindowsFirewallRule::builder()
+                .name(&rule_name)
+                .action(ActionFirewallWindows::Allow)
+                .direction(DirectionFirewallWindows::In)
+                .enabled(true)
+                .description(format!("Transition from {} to {}", label_from, label_to))
+                .application_name("test")
+                .protocol(*proto_from);
+
+            let rule = match proto_from {
+                ProtocolFirewallWindows::Tcp | ProtocolFirewallWindows::Udp => base_builder
+                    .local_ports([1234])
+                    .remote_ports([4321])
+                    .build(),
+                ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6 => {
+                    base_builder.icmp_types_and_codes("8:0").build()
+                }
+                _ => base_builder.build(),
+            };
+
+            let result = rule.add_or_update();
+            assert!(
+                result.is_ok(),
+                "Failed to add rule for protocol {}",
+                label_from
+            );
+            assert!(rule_exists(&rule_name).unwrap(), "Rule not created (from)");
+            let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
+            assert_eq!(updated_rule.protocol(), Some(proto_from));
+
+            let base_builder = WindowsFirewallRule::builder()
+                .name(&rule_name)
+                .action(ActionFirewallWindows::Allow)
+                .direction(DirectionFirewallWindows::In)
+                .enabled(true)
+                .description(format!("Transition from {} to {}", label_from, label_to))
+                .application_name("test")
+                .protocol(*proto_to);
+
+            let updated_rule = match proto_to {
+                ProtocolFirewallWindows::Tcp | ProtocolFirewallWindows::Udp => base_builder
+                    .local_ports([2345])
+                    .remote_ports([5432])
+                    .build(),
+                ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6 => {
+                    base_builder.icmp_types_and_codes("0:0").build()
+                }
+                _ => base_builder.build(),
+            };
+
+            let update_result = updated_rule.add_or_update();
+            assert!(
+                update_result.is_ok(),
+                "Failed to update rule from {} to {}",
+                label_from,
+                label_to
+            );
+
+            assert!(
+                rule_exists(&rule_name).unwrap(),
+                "Rule disappeared after update"
+            );
+            let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
+            assert_eq!(updated_rule.protocol(), Some(proto_to));
+
+            remove_rule(&rule_name).expect("Failed to remove test rule");
+            assert!(!rule_exists(&rule_name).unwrap(), "Rule was not removed");
+        }
+    }
+}
+
+#[test]
 #[serial]
 fn test_windows_firewall_rule_per_network_interface() {
     use ipconfig::get_adapters;

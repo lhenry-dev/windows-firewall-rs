@@ -14,7 +14,21 @@ use windows::{
     },
 };
 
-use crate::{constants::DWCOINIT, WindowsFirewallError};
+use crate::{constants::DWCOINIT, ProtocolFirewallWindows, WindowsFirewallError};
+
+pub fn is_not_icmp(protocol: &ProtocolFirewallWindows) -> bool {
+    !matches!(
+        protocol,
+        ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6
+    )
+}
+
+pub fn is_not_tcp_or_udp(protocol: &ProtocolFirewallWindows) -> bool {
+    !matches!(
+        protocol,
+        ProtocolFirewallWindows::Udp | ProtocolFirewallWindows::Tcp
+    )
+}
 
 pub fn to_string_hashset<T, I>(items: I) -> HashSet<String>
 where

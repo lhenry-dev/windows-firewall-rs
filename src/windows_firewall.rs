@@ -14,8 +14,11 @@ use crate::constants::DWCLSCONTEXT;
 use crate::errors::WindowsFirewallError;
 use crate::firewall_enums::ProfileFirewallWindows;
 use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
-use crate::utils::{convert_hashset_to_bstr, hashset_to_variant, with_com_initialized};
-use crate::{DirectionFirewallWindows, ProtocolFirewallWindows};
+use crate::utils::{
+    convert_hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp,
+    with_com_initialized,
+};
+use crate::DirectionFirewallWindows;
 
 /// Checks if a firewall rule with the given name exists.
 ///
@@ -185,7 +188,7 @@ pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, Window
 /// # Returns
 ///
 /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added
-/// or updated successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
+/// successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
 /// In case of an error (e.g., COM initialization failure, failure to add or update the rule), it returns a
 /// [`WindowsFirewallError`].
 ///
@@ -267,11 +270,6 @@ unsafe fn update_inetfw_rule(
     rule: &INetFwRule,
     settings: &WindowsFirewallRuleSettings,
 ) -> Result<(), windows::core::Error> {
-    let is_icmp = matches!(
-        settings.protocol,
-        Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
-    );
-
     if let Some(name) = &settings.name {
         rule.SetName(&BSTR::from(name))?;
     }
@@ -294,11 +292,12 @@ unsafe fn update_inetfw_rule(
         rule.SetServiceName(&BSTR::from(service_name))?;
     }
     if let Some(protocol) = settings.protocol {
-        if is_icmp {
-            rule.SetLocalPorts(&BSTR::from(""))?;
-            rule.SetRemotePorts(&BSTR::from(""))?;
-        } else {
-            rule.SetIcmpTypesAndCodes(&BSTR::from(""))?;
+        if is_not_tcp_or_udp(&protocol) {
+            let _ = rule.SetLocalPorts(&BSTR::from(""));
+            let _ = rule.SetRemotePorts(&BSTR::from(""));
+        }
+        if is_not_icmp(&protocol) {
+            let _ = rule.SetIcmpTypesAndCodes(&BSTR::from(""));
         }
         rule.SetProtocol(protocol.into())?;
     }

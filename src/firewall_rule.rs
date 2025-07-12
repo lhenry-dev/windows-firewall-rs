@@ -14,8 +14,8 @@ use crate::firewall_enums::{
     ProtocolFirewallWindows,
 };
 use crate::utils::{
-    convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, to_string_hashset,
-    variant_to_hashset, with_com_initialized,
+    convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, is_not_icmp,
+    is_not_tcp_or_udp, to_string_hashset, variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{add_or_update, remove_rule, rule_exists, update_rule};
 use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, InterfaceTypes};
@@ -90,7 +90,7 @@ pub struct WindowsFirewallRule {
     #[builder(default, setter(strip_option, into))]
     service_name: Option<String>,
 
-    /// The IP protocol this rule applies to (e.g., TCP, UDP). Refer to IANA for protocol numbers.
+    /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
     protocol: Option<ProtocolFirewallWindows>,
 
@@ -208,7 +208,7 @@ impl WindowsFirewallRule {
     /// # Returns
     ///
     /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added
-    /// or updated successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
+    /// successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
     /// In case of an error (e.g., COM initialization failure, failure to add or update the rule), it returns a
     /// [`WindowsFirewallError`].
     ///
@@ -288,11 +288,6 @@ impl WindowsFirewallRule {
     ) -> Result<(), WindowsFirewallError> {
         update_rule(&self.name, settings)?;
 
-        let is_icmp = matches!(
-            &settings.protocol,
-            Some(ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6)
-        );
-
         if let Some(name) = &settings.name {
             self.name = name.to_string();
         }
@@ -315,10 +310,11 @@ impl WindowsFirewallRule {
             self.service_name = Some(service_name.to_string());
         }
         if let Some(protocol) = &settings.protocol {
-            if is_icmp {
+            if is_not_tcp_or_udp(protocol) {
                 self.local_ports = None;
                 self.remote_ports = None;
-            } else {
+            }
+            if is_not_icmp(protocol) {
                 self.icmp_types_and_codes = None;
             }
             self.protocol = Some(*protocol);
@@ -679,7 +675,7 @@ pub struct WindowsFirewallRuleSettings {
     #[builder(default, setter(strip_option, into))]
     pub(crate) service_name: Option<String>,
 
-    /// The protocol used by the firewall rule (e.g., TCP, UDP). Refer to IANA for protocol numbers.
+    /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
     pub(crate) protocol: Option<ProtocolFirewallWindows>,
 
