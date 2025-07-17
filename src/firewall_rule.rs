@@ -14,8 +14,8 @@ use crate::firewall_enums::{
     ProtocolFirewallWindows,
 };
 use crate::utils::{
-    convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, is_not_icmp,
-    is_not_tcp_or_udp, to_string_hashset, variant_to_hashset, with_com_initialized,
+    bstr_to_hashset, hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp,
+    to_string_hashset, variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{add_or_update, remove_rule, rule_exists, update_rule};
 use crate::{add_rule, add_rule_if_not_exists, enable_rule, InterfaceTypes};
@@ -629,53 +629,38 @@ impl TryFrom<INetFwRule> for WindowsFirewallRule {
                 direction: fw_rule.Direction()?.try_into()?,
                 enabled: fw_rule.Enabled()?.into(),
                 action: fw_rule.Action()?.try_into()?,
-                description: fw_rule.Description().ok().and_then(|bstr| {
-                    let string = bstr.to_string();
-                    if string.is_empty() {
-                        None
-                    } else {
-                        Some(string)
-                    }
-                }),
-                application_name: fw_rule.ApplicationName().ok().and_then(|bstr| {
-                    let string = bstr.to_string();
-                    if string.is_empty() {
-                        None
-                    } else {
-                        Some(string)
-                    }
-                }),
-                service_name: fw_rule.ServiceName().ok().and_then(|bstr| {
-                    let string = bstr.to_string();
-                    if string.is_empty() {
-                        None
-                    } else {
-                        Some(string)
-                    }
-                }),
+                description: fw_rule
+                    .Description()
+                    .ok()
+                    .map(|bstr| bstr.to_string())
+                    .filter(|s| !s.is_empty()),
+                application_name: fw_rule
+                    .ApplicationName()
+                    .ok()
+                    .map(|bstr| bstr.to_string())
+                    .filter(|s| !s.is_empty()),
+                service_name: fw_rule
+                    .ServiceName()
+                    .ok()
+                    .map(|bstr| bstr.to_string())
+                    .filter(|s| !s.is_empty()),
                 protocol: fw_rule.Protocol()?.try_into().ok(),
-                local_ports: convert_bstr_to_hashset(fw_rule.LocalPorts()),
-                remote_ports: convert_bstr_to_hashset(fw_rule.RemotePorts()),
-                local_addresses: convert_bstr_to_hashset(fw_rule.LocalAddresses()),
-                remote_addresses: convert_bstr_to_hashset(fw_rule.RemoteAddresses()),
-                icmp_types_and_codes: fw_rule.IcmpTypesAndCodes().ok().and_then(|bstr| {
-                    let string = bstr.to_string();
-                    if string.is_empty() {
-                        None
-                    } else {
-                        Some(string)
-                    }
-                }),
+                local_ports: bstr_to_hashset(fw_rule.LocalPorts()),
+                remote_ports: bstr_to_hashset(fw_rule.RemotePorts()),
+                local_addresses: bstr_to_hashset(fw_rule.LocalAddresses()),
+                remote_addresses: bstr_to_hashset(fw_rule.RemoteAddresses()),
+                icmp_types_and_codes: fw_rule
+                    .IcmpTypesAndCodes()
+                    .ok()
+                    .map(|bstr| bstr.to_string())
+                    .filter(|s| !s.is_empty()),
                 interfaces: Some(variant_to_hashset(&fw_rule.Interfaces()?)?),
-                interface_types: convert_bstr_to_hashset(fw_rule.InterfaceTypes()),
-                grouping: fw_rule.Grouping().ok().and_then(|bstr| {
-                    let string = bstr.to_string();
-                    if string.is_empty() {
-                        None
-                    } else {
-                        Some(string)
-                    }
-                }),
+                interface_types: bstr_to_hashset(fw_rule.InterfaceTypes()),
+                grouping: fw_rule
+                    .Grouping()
+                    .ok()
+                    .map(|bstr| bstr.to_string())
+                    .filter(|s| !s.is_empty()),
                 profiles: fw_rule.Profiles()?.try_into().ok(),
                 edge_traversal: fw_rule.EdgeTraversal().ok().map(VARIANT_BOOL::as_bool),
             })
@@ -724,22 +709,22 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
             }
             if let Some(ref local_ports) = rule.local_ports {
                 fw_rule
-                    .SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))
+                    .SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
                     .map_err(SetRuleError::LocalPorts)?;
             }
             if let Some(ref remote_ports) = rule.remote_ports {
                 fw_rule
-                    .SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))
+                    .SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
                     .map_err(SetRuleError::RemotePorts)?;
             }
             if let Some(ref local_addresses) = rule.local_addresses {
                 fw_rule
-                    .SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))
+                    .SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
                     .map_err(SetRuleError::LocalAddresses)?;
             }
             if let Some(ref remote_addresses) = rule.remote_addresses {
                 fw_rule
-                    .SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))
+                    .SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
                     .map_err(SetRuleError::RemoteAddresses)?;
             }
             if let Some(ref icmp_types_and_codes) = rule.icmp_types_and_codes {
@@ -764,7 +749,7 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
             }
             if let Some(ref interface_types) = rule.interface_types {
                 fw_rule
-                    .SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))
+                    .SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
                     .map_err(SetRuleError::InterfaceTypes)?;
             }
             if let Some(profiles) = rule.profiles {

@@ -2,6 +2,7 @@ use scopeguard::guard;
 use std::{
     collections::HashSet,
     ffi::OsStr,
+    mem::ManuallyDrop,
     ptr::{addr_of, from_ref},
     str::FromStr,
 };
@@ -9,8 +10,10 @@ use windows::{
     core::{BSTR, PWSTR},
     Win32::System::{
         Com::{CoInitializeEx, CoUninitialize},
-        Ole::{SafeArrayCreateVector, SafeArrayPutElement},
-        Variant::{self, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT},
+        Ole::{SafeArrayCreateVector, SafeArrayDestroy, SafeArrayPutElement},
+        Variant::{
+            self, VariantInit, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT,
+        },
     },
 };
 
@@ -38,7 +41,7 @@ where
     items.into_iter().map(Into::into).collect()
 }
 
-pub fn convert_bstr_to_hashset<T>(bstr: Result<BSTR, windows_result::Error>) -> Option<HashSet<T>>
+pub fn bstr_to_hashset<T>(bstr: Result<BSTR, windows_result::Error>) -> Option<HashSet<T>>
 where
     T: FromStr + Eq + std::hash::Hash,
 {
@@ -67,7 +70,7 @@ where
         .filter(|hash_set| !hash_set.is_empty())
 }
 
-pub fn convert_hashset_to_bstr<T>(hashset: Option<&HashSet<T>>) -> BSTR
+pub fn hashset_to_bstr<T>(hashset: Option<&HashSet<T>>) -> BSTR
 where
     T: ToString,
 {
@@ -93,36 +96,35 @@ where
     }
 
     unsafe {
-        let count = u32::try_from(hashset.len()).map_err(|_| windows::core::Error::from_win32())?;
+        let count = u32::try_from(hashset.len())?;
         let psa = SafeArrayCreateVector(VT_VARIANT, 0, count);
 
         if psa.is_null() {
-            return Err(windows::core::Error::from_win32());
+            return Err(windows_result::Error::from_win32());
         }
 
         for (i, item) in hashset.iter().enumerate() {
             let bstr = BSTR::from(item.to_string());
+            let mut vt_element = VariantInit();
 
-            let mut vt_element = VARIANT::default();
-            std::ptr::write(&mut (*vt_element.Anonymous.Anonymous).vt, VT_BSTR);
-            std::ptr::write(
-                &mut (*vt_element.Anonymous.Anonymous).Anonymous.bstrVal,
-                std::mem::ManuallyDrop::new(bstr),
-            );
+            (*vt_element.Anonymous.Anonymous).vt = VT_BSTR;
+            (*vt_element.Anonymous.Anonymous).Anonymous.bstrVal = ManuallyDrop::new(bstr);
 
-            SafeArrayPutElement(
+            let hr = SafeArrayPutElement(
                 psa,
                 from_ref(&i32::try_from(i)?).cast(),
                 addr_of!(vt_element).cast::<std::ffi::c_void>(),
-            )?;
+            );
+
+            if let Err(e) = hr {
+                SafeArrayDestroy(psa)?;
+                return Err(e);
+            }
         }
 
-        let mut variant = VARIANT::default();
-        std::ptr::write(
-            &mut (*variant.Anonymous.Anonymous).vt,
-            VT_ARRAY | VT_VARIANT,
-        );
-        std::ptr::write(&mut (*variant.Anonymous.Anonymous).Anonymous.parray, psa);
+        let mut variant = VariantInit();
+        (*variant.Anonymous.Anonymous).vt = VT_ARRAY | VT_VARIANT;
+        (*variant.Anonymous.Anonymous).Anonymous.parray = psa;
 
         Ok(variant)
     }
@@ -169,16 +171,14 @@ mod tests {
     use windows::core::BSTR;
     use windows_result::Error;
 
-    use crate::utils::{
-        convert_bstr_to_hashset, convert_hashset_to_bstr, hashset_to_variant, variant_to_hashset,
-    };
+    use crate::utils::{bstr_to_hashset, hashset_to_bstr, hashset_to_variant, variant_to_hashset};
 
     // BSTR tests
     #[test]
     fn test_convert_bstr_to_hashset_valid_input() {
         let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("1, 2, 3, 4"));
 
-        let result: Option<HashSet<i32>> = convert_bstr_to_hashset(bstr_value);
+        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
         let expected: HashSet<i32> = vec![1, 2, 3, 4].into_iter().collect();
         assert_eq!(result, Some(expected));
@@ -188,7 +188,7 @@ mod tests {
     fn test_convert_bstr_to_hashset_with_empty_strings() {
         let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("  ,  ,  "));
 
-        let result: Option<HashSet<i32>> = convert_bstr_to_hashset(bstr_value);
+        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
         assert_eq!(result, None);
     }
@@ -197,7 +197,7 @@ mod tests {
     fn test_convert_bstr_to_hashset_with_invalid_input() {
         let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("1, abc, 3"));
 
-        let result: Option<HashSet<i32>> = convert_bstr_to_hashset(bstr_value);
+        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
         let expected: HashSet<i32> = vec![1, 3].into_iter().collect();
         assert_eq!(result, Some(expected));
@@ -207,7 +207,7 @@ mod tests {
     fn test_convert_bstr_to_hashset_empty_input() {
         let bstr_value: Result<BSTR, Error> = Ok(BSTR::from(""));
 
-        let result: Option<HashSet<i32>> = convert_bstr_to_hashset(bstr_value);
+        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
         assert_eq!(result, None);
     }
@@ -216,7 +216,7 @@ mod tests {
     fn test_convert_bstr_to_hashset_error_input() {
         let bstr_value: Result<BSTR, Error> = Err(windows_result::Error::empty());
 
-        let result: Option<HashSet<i32>> = convert_bstr_to_hashset(bstr_value);
+        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
         assert_eq!(result, None);
     }
@@ -226,7 +226,7 @@ mod tests {
         let hashset_data: HashSet<i32> = vec![1, 2, 3, 4].into_iter().collect();
         let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
 
-        let result: BSTR = convert_hashset_to_bstr(hashset);
+        let result: BSTR = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("1,2,3,4");
 
@@ -246,7 +246,7 @@ mod tests {
         let hashset_data: HashSet<i32> = HashSet::new();
         let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
 
-        let result: BSTR = convert_hashset_to_bstr(hashset);
+        let result: BSTR = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("");
         assert_eq!(result, expected);
@@ -256,7 +256,7 @@ mod tests {
     fn test_convert_hashset_to_bstr_none_input() {
         let hashset: Option<&HashSet<i32>> = None;
 
-        let result: BSTR = convert_hashset_to_bstr(hashset);
+        let result: BSTR = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("");
         assert_eq!(result, expected);
@@ -267,7 +267,7 @@ mod tests {
         let hashset_data: HashSet<i32> = vec![42].into_iter().collect();
         let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
 
-        let result: BSTR = convert_hashset_to_bstr(hashset);
+        let result: BSTR = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("42");
         assert_eq!(result, expected);
