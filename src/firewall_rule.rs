@@ -8,7 +8,7 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
 use windows::Win32::System::Com::CoCreateInstance;
 
 use crate::constants::DWCLSCONTEXT;
-use crate::errors::WindowsFirewallError;
+use crate::errors::{SetRuleError, WindowsFirewallError};
 use crate::firewall_enums::{
     ActionFirewallWindows, DirectionFirewallWindows, ProfileFirewallWindows,
     ProtocolFirewallWindows,
@@ -692,51 +692,87 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
         with_com_initialized(|| unsafe {
             let fw_rule: Self = CoCreateInstance(&NetFwRule, None, DWCLSCONTEXT)?;
 
-            fw_rule.SetName(&BSTR::from(&rule.name))?;
-            fw_rule.SetDirection(rule.direction.into())?;
-            fw_rule.SetEnabled(rule.enabled.into())?;
-            fw_rule.SetAction(rule.action.into())?;
+            fw_rule
+                .SetName(&BSTR::from(&rule.name))
+                .map_err(SetRuleError::Name)?;
+            fw_rule
+                .SetDirection(rule.direction.into())
+                .map_err(SetRuleError::Direction)?;
+            fw_rule
+                .SetEnabled(rule.enabled.into())
+                .map_err(SetRuleError::Enabled)?;
+            fw_rule
+                .SetAction(rule.action.into())
+                .map_err(SetRuleError::Action)?;
             if let Some(ref description) = rule.description {
-                fw_rule.SetDescription(&BSTR::from(description))?;
+                fw_rule
+                    .SetDescription(&BSTR::from(description))
+                    .map_err(SetRuleError::Description)?;
             }
             if let Some(ref app_name) = rule.application_name {
-                fw_rule.SetApplicationName(&BSTR::from(app_name))?;
+                fw_rule
+                    .SetApplicationName(&BSTR::from(app_name))
+                    .map_err(SetRuleError::ApplicationName)?;
             }
             if let Some(ref service_name) = rule.service_name {
-                fw_rule.SetServiceName(&BSTR::from(service_name))?;
+                fw_rule
+                    .SetServiceName(&BSTR::from(service_name))
+                    .map_err(SetRuleError::ServiceName)?;
             }
             if let Some(protocol) = rule.protocol {
-                fw_rule.SetProtocol(protocol.into())?;
+                fw_rule
+                    .SetProtocol(protocol.into())
+                    .map_err(SetRuleError::Protocol)?;
             }
             if let Some(ref local_ports) = rule.local_ports {
-                fw_rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))?;
+                fw_rule
+                    .SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))
+                    .map_err(SetRuleError::LocalPorts)?;
             }
             if let Some(ref remote_ports) = rule.remote_ports {
-                fw_rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))?;
+                fw_rule
+                    .SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))
+                    .map_err(SetRuleError::RemotePorts)?;
             }
             if let Some(ref local_addresses) = rule.local_addresses {
-                fw_rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))?;
+                fw_rule
+                    .SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))
+                    .map_err(SetRuleError::LocalAddresses)?;
             }
             if let Some(ref remote_addresses) = rule.remote_addresses {
-                fw_rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))?;
+                fw_rule
+                    .SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))
+                    .map_err(SetRuleError::RemoteAddresses)?;
             }
             if let Some(ref icmp_types_and_codes) = rule.icmp_types_and_codes {
-                fw_rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))?;
+                fw_rule
+                    .SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
+                    .map_err(SetRuleError::IcmpTypesAndCodes)?;
             }
             if let Some(edge_traversal) = rule.edge_traversal {
-                fw_rule.SetEdgeTraversal(edge_traversal.into())?;
+                fw_rule
+                    .SetEdgeTraversal(edge_traversal.into())
+                    .map_err(SetRuleError::EdgeTraversal)?;
             }
             if let Some(ref grouping) = rule.grouping {
-                fw_rule.SetGrouping(&BSTR::from(grouping))?;
+                fw_rule
+                    .SetGrouping(&BSTR::from(grouping))
+                    .map_err(SetRuleError::Grouping)?;
             }
             if let Some(ref interface) = rule.interfaces {
-                fw_rule.SetInterfaces(&hashset_to_variant(interface)?)?;
+                fw_rule
+                    .SetInterfaces(&hashset_to_variant(interface)?)
+                    .map_err(SetRuleError::Interfaces)?;
             }
             if let Some(ref interface_types) = rule.interface_types {
-                fw_rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))?;
+                fw_rule
+                    .SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))
+                    .map_err(SetRuleError::InterfaceTypes)?;
             }
             if let Some(profiles) = rule.profiles {
-                fw_rule.SetProfiles(profiles.into())?;
+                fw_rule
+                    .SetProfiles(profiles.into())
+                    .map_err(SetRuleError::Profiles)?;
             }
 
             Ok(fw_rule)

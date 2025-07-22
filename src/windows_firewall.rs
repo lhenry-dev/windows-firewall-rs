@@ -11,7 +11,7 @@ use windows::Win32::System::Ole::IEnumVARIANT;
 use windows::Win32::System::Variant::VARIANT;
 
 use crate::constants::DWCLSCONTEXT;
-use crate::errors::WindowsFirewallError;
+use crate::errors::{SetRuleError, WindowsFirewallError};
 use crate::firewall_enums::ProfileFirewallWindows;
 use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
 use crate::utils::{
@@ -269,27 +269,34 @@ pub fn update_rule(
 unsafe fn update_inetfw_rule(
     rule: &INetFwRule,
     settings: &WindowsFirewallRuleSettings,
-) -> Result<(), windows::core::Error> {
+) -> Result<(), WindowsFirewallError> {
     if let Some(name) = &settings.name {
-        rule.SetName(&BSTR::from(name))?;
+        rule.SetName(&BSTR::from(name))
+            .map_err(SetRuleError::Name)?;
     }
     if let Some(direction) = settings.direction {
-        rule.SetDirection(direction.into())?;
+        rule.SetDirection(direction.into())
+            .map_err(SetRuleError::Direction)?;
     }
     if let Some(enabled) = settings.enabled {
-        rule.SetEnabled(enabled.into())?;
+        rule.SetEnabled(enabled.into())
+            .map_err(SetRuleError::Enabled)?;
     }
     if let Some(action) = settings.action {
-        rule.SetAction(action.into())?;
+        rule.SetAction(action.into())
+            .map_err(SetRuleError::Action)?;
     }
     if let Some(description) = &settings.description {
-        rule.SetDescription(&BSTR::from(description))?;
+        rule.SetDescription(&BSTR::from(description))
+            .map_err(SetRuleError::Description)?;
     }
     if let Some(application_name) = &settings.application_name {
-        rule.SetApplicationName(&BSTR::from(application_name))?;
+        rule.SetApplicationName(&BSTR::from(application_name))
+            .map_err(SetRuleError::ApplicationName)?;
     }
     if let Some(service_name) = &settings.service_name {
-        rule.SetServiceName(&BSTR::from(service_name))?;
+        rule.SetServiceName(&BSTR::from(service_name))
+            .map_err(SetRuleError::ServiceName)?;
     }
     if let Some(protocol) = settings.protocol {
         if is_not_tcp_or_udp(&protocol) {
@@ -299,37 +306,48 @@ unsafe fn update_inetfw_rule(
         if is_not_icmp(&protocol) {
             let _ = rule.SetIcmpTypesAndCodes(&BSTR::from(""));
         }
-        rule.SetProtocol(protocol.into())?;
+        rule.SetProtocol(protocol.into())
+            .map_err(SetRuleError::Protocol)?;
     }
     if let Some(local_ports) = &settings.local_ports {
-        rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))?;
+        rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))
+            .map_err(SetRuleError::LocalPorts)?;
     }
     if let Some(remote_ports) = &settings.remote_ports {
-        rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))?;
+        rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))
+            .map_err(SetRuleError::RemotePorts)?;
     }
     if let Some(local_addresses) = &settings.local_addresses {
-        rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))?;
+        rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))
+            .map_err(SetRuleError::LocalAddresses)?;
     }
     if let Some(remote_addresses) = &settings.remote_addresses {
-        rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))?;
+        rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))
+            .map_err(SetRuleError::RemoteAddresses)?;
     }
     if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-        rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))?;
+        rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
+            .map_err(SetRuleError::IcmpTypesAndCodes)?;
     }
     if let Some(edge_traversal) = settings.edge_traversal {
-        rule.SetEdgeTraversal(edge_traversal.into())?;
+        rule.SetEdgeTraversal(edge_traversal.into())
+            .map_err(SetRuleError::EdgeTraversal)?;
     }
     if let Some(grouping) = &settings.grouping {
-        rule.SetGrouping(&BSTR::from(grouping))?;
+        rule.SetGrouping(&BSTR::from(grouping))
+            .map_err(SetRuleError::Grouping)?;
     }
     if let Some(interfaces) = &settings.interfaces {
-        rule.SetInterfaces(&hashset_to_variant(interfaces)?)?;
+        rule.SetInterfaces(&hashset_to_variant(interfaces)?)
+            .map_err(SetRuleError::Interfaces)?;
     }
     if let Some(interface_types) = &settings.interface_types {
-        rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))?;
+        rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))
+            .map_err(SetRuleError::InterfaceTypes)?;
     }
     if let Some(profiles) = settings.profiles {
-        rule.SetProfiles(profiles.into())?;
+        rule.SetProfiles(profiles.into())
+            .map_err(SetRuleError::Profiles)?;
     }
 
     Ok(())
@@ -368,7 +386,8 @@ pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         let rule_name = BSTR::from(rule_name);
         let rule = fw_rules.Item(&rule_name)?;
 
-        rule.SetEnabled(false.into())?;
+        rule.SetEnabled(false.into())
+            .map_err(SetRuleError::Enabled)?;
 
         Ok(())
     })
@@ -407,7 +426,8 @@ pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         let rule_name = BSTR::from(rule_name);
         let rule = fw_rules.Item(&rule_name)?;
 
-        rule.SetEnabled(true.into())?;
+        rule.SetEnabled(true.into())
+            .map_err(SetRuleError::Enabled)?;
 
         Ok(())
     })
