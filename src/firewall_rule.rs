@@ -880,3 +880,133 @@ impl From<WindowsFirewallRule> for WindowsFirewallRuleSettings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+    use std::net::IpAddr;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_windows_firewall_rule_setters() {
+        let mut rule = WindowsFirewallRule::builder()
+            .name("test")
+            .action(ActionFirewallWindows::Block)
+            .direction(DirectionFirewallWindows::Out)
+            .enabled(false)
+            .build();
+
+        rule.set_name("new_name");
+        assert_eq!(rule.name(), "new_name");
+
+        rule.set_direction(DirectionFirewallWindows::In);
+        assert_eq!(rule.direction(), &DirectionFirewallWindows::In);
+
+        rule.set_enabled(true);
+        assert!(rule.enabled());
+
+        rule.set_action(ActionFirewallWindows::Allow);
+        assert_eq!(rule.action(), &ActionFirewallWindows::Allow);
+
+        let desc: Option<String> = Some("desc".to_string());
+        rule.set_description(desc);
+        assert_eq!(rule.description(), Some(&"desc".to_string()));
+        rule.set_description(None::<String>);
+        assert_eq!(rule.description(), None);
+
+        // set_application_name
+        let app: Option<String> = Some("app.exe".to_string());
+        rule.set_application_name(app);
+        assert_eq!(rule.application_name(), Some(&"app.exe".to_string()));
+        rule.set_application_name(None::<String>);
+        assert_eq!(rule.application_name(), None);
+
+        // set_service_name
+        let svc: Option<String> = Some("svc".to_string());
+        rule.set_service_name(svc);
+        assert_eq!(rule.service_name(), Some(&"svc".to_string()));
+        rule.set_service_name(None::<String>);
+        assert_eq!(rule.service_name(), None);
+
+        // set_protocol
+        rule.set_protocol(Some(ProtocolFirewallWindows::Tcp));
+        assert_eq!(rule.protocol(), Some(&ProtocolFirewallWindows::Tcp));
+        rule.set_protocol(None);
+        assert_eq!(rule.protocol(), None);
+
+        // set_local_ports
+        let mut ports = HashSet::new();
+        ports.insert(80);
+        rule.set_local_ports(Some(ports.clone()));
+        assert_eq!(rule.local_ports(), Some(&ports));
+        rule.set_local_ports(None);
+        assert_eq!(rule.local_ports(), None);
+
+        // set_remote_ports
+        let mut rports = HashSet::new();
+        rports.insert(443);
+        rule.set_remote_ports(Some(rports.clone()));
+        assert_eq!(rule.remote_ports(), Some(&rports));
+        rule.set_remote_ports(None);
+        assert_eq!(rule.remote_ports(), None);
+
+        // set_local_addresses
+        let mut addrs = HashSet::new();
+        addrs.insert(IpAddr::from_str("127.0.0.1").unwrap());
+        rule.set_local_addresses(Some(addrs.clone()));
+        assert_eq!(rule.local_addresses(), Some(&addrs));
+        rule.set_local_addresses(None);
+        assert_eq!(rule.local_addresses(), None);
+
+        // set_remote_addresses
+        let mut raddrs = HashSet::new();
+        raddrs.insert(IpAddr::from_str("8.8.8.8").unwrap());
+        rule.set_remote_addresses(Some(raddrs.clone()));
+        assert_eq!(rule.remote_addresses(), Some(&raddrs));
+        rule.set_remote_addresses(None);
+        assert_eq!(rule.remote_addresses(), None);
+
+        // set_icmp_types_and_codes
+        let icmp: Option<String> = Some("8:0".to_string());
+        rule.set_icmp_types_and_codes(icmp);
+        assert_eq!(rule.icmp_types_and_codes(), Some(&"8:0".to_string()));
+        rule.set_icmp_types_and_codes(None::<String>);
+        assert_eq!(rule.icmp_types_and_codes(), None);
+
+        // set_interfaces
+        let mut interfaces = HashSet::new();
+        interfaces.insert("Wi-Fi".to_string());
+        rule.set_interfaces(Some(interfaces.clone()));
+        assert_eq!(rule.interfaces(), Some(&interfaces));
+        rule.set_interfaces(None);
+        assert_eq!(rule.interfaces(), None);
+
+        // set_interface_types
+        let mut iftypes = HashSet::new();
+        iftypes.insert(InterfaceTypes::Lan);
+        rule.set_interface_types(Some(iftypes.clone()));
+        assert_eq!(rule.interface_types(), Some(&iftypes));
+        rule.set_interface_types(None);
+        assert_eq!(rule.interface_types(), None);
+
+        // set_grouping
+        let group: Option<String> = Some("group".to_string());
+        rule.set_grouping(group);
+        assert_eq!(rule.grouping(), Some(&"group".to_string()));
+        rule.set_grouping(None::<String>);
+        assert_eq!(rule.grouping(), None);
+
+        // set_profiles
+        rule.set_profiles(Some(ProfileFirewallWindows::Private));
+        assert_eq!(rule.profiles(), Some(&ProfileFirewallWindows::Private));
+        rule.set_profiles(None);
+        assert_eq!(rule.profiles(), None);
+
+        // set_edge_traversal
+        rule.set_edge_traversal(Some(true));
+        assert_eq!(rule.edge_traversal(), Some(true));
+        rule.set_edge_traversal(None);
+        assert_eq!(rule.edge_traversal(), None);
+    }
+}
