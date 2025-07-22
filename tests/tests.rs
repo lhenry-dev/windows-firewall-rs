@@ -236,10 +236,10 @@ fn test_firewall_rule_operations_2() {
     let res_exist = rule_exists(RULE_NAME).expect("Failed to check if rule exists");
     assert!(res_exist, "The rule should exist after being added");
 
-    rule.disable(true).expect("Failed to disable firewall rule");
+    rule.enable(false).expect("Failed to disable firewall rule");
     assert!(!rule.enabled(), "The rule should be disabled");
 
-    rule.disable(false).expect("Failed to enable firewall rule");
+    rule.enable(true).expect("Failed to enable firewall rule");
     assert!(rule.enabled(), "The rule should be enabled");
 
     remove_rule(RULE_NAME).expect("Failed to remove firewall rule");

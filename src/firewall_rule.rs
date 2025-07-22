@@ -18,7 +18,7 @@ use crate::utils::{
     is_not_tcp_or_udp, to_string_hashset, variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{add_or_update, remove_rule, rule_exists, update_rule};
-use crate::{add_rule, add_rule_if_not_exists, disable_rule, enable_rule, InterfaceTypes};
+use crate::{add_rule, add_rule_if_not_exists, enable_rule, InterfaceTypes};
 
 /// Represents a rule in the Windows Firewall.
 ///
@@ -354,17 +354,17 @@ impl WindowsFirewallRule {
 
     /// Enables or disables an existing firewall rule.
     ///
-    /// This function modifies the state of a firewall rule based on the `disable` parameter.
-    /// If `disable` is `true`, the rule is disabled; otherwise, it is enabled. The function
+    /// This function modifies the state of a firewall rule based on the `enable` parameter.
+    /// If `enable` is `true`, the rule is enabled; otherwise, it is disabled. The function
     /// updates the `enabled` field accordingly.
     ///
     /// # Arguments
     ///
-    /// * `disable` - A boolean indicating whether to disable (`true`) or enable (`false`) the rule.
+    /// * `enable` - A boolean indicating whether to enable (`true`) or disable (`false`) the rule.
     ///
     /// # Returns
     ///
-    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is enabled successfully,
+    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
     /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
     /// it returns a [`WindowsFirewallError`].
     ///
@@ -373,16 +373,14 @@ impl WindowsFirewallRule {
     /// This function may return a [`WindowsFirewallError`] if there is a failure during:
     /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
     /// - Fetching the rule.
-    /// - Enabling the rule.
+    /// - Enabling or disabling the rule.
     ///
     /// # Security
     ///
     /// ⚠️ This function requires **administrative privileges**.
-    pub fn disable(&mut self, disable: bool) -> Result<(), WindowsFirewallError> {
-        let action = if disable { disable_rule } else { enable_rule };
-
-        action(&self.name)?;
-        self.enabled = !disable;
+    pub fn enable(&mut self, enable: bool) -> Result<(), WindowsFirewallError> {
+        enable_rule(&self.name, enable)?;
+        self.enabled = enable;
         Ok(())
     }
 
