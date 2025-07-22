@@ -353,18 +353,19 @@ unsafe fn update_inetfw_rule(
     Ok(())
 }
 
-/// Disables an existing firewall rule.
+/// Enables or disables an existing firewall rule.
 ///
 /// This function initializes COM, retrieves the firewall policy object,
-/// and disables the specified firewall rule.
+/// and sets the enabled state of the specified firewall rule.
 ///
 /// # Arguments
 ///
-/// * `rule_name` - A string slice representing the name of the firewall rule to disable.
+/// * `rule_name` - A string slice representing the name of the firewall rule to modify.
+/// * `enabled` - A boolean indicating whether to enable (`true`) or disable (`false`) the rule.
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is disabled successfully,
+/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
 /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
 /// it returns a [`WindowsFirewallError`].
 ///
@@ -373,12 +374,12 @@ unsafe fn update_inetfw_rule(
 /// This function may return a [`WindowsFirewallError`] if there is a failure during:
 /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the rule.
-/// - Disabling the rule.
+/// - Enabling or disabling the rule.
 ///
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
+pub fn enable_rule(rule_name: &str, enabled: bool) -> Result<(), WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -386,47 +387,7 @@ pub fn disable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
         let rule_name = BSTR::from(rule_name);
         let rule = fw_rules.Item(&rule_name)?;
 
-        rule.SetEnabled(false.into())
-            .map_err(SetRuleError::Enabled)?;
-
-        Ok(())
-    })
-}
-
-/// Enables an existing firewall rule.
-///
-/// This function initializes COM, retrieves the firewall policy object,
-/// and enables the specified firewall rule.
-///
-/// # Arguments
-///
-/// * `rule_name` - A string slice representing the name of the firewall rule to enable.
-///
-/// # Returns
-///
-/// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is enabled successfully,
-/// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
-/// it returns a [`WindowsFirewallError`].
-///
-/// # Errors
-///
-/// This function may return a [`WindowsFirewallError`] if there is a failure during:
-/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-/// - Fetching the rule.
-/// - Enabling the rule.
-///
-/// # Security
-///
-/// ⚠️ This function requires **administrative privileges**.
-pub fn enable_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
-    with_com_initialized(|| unsafe {
-        let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
-        let fw_rules: INetFwRules = fw_policy.Rules()?;
-
-        let rule_name = BSTR::from(rule_name);
-        let rule = fw_rules.Item(&rule_name)?;
-
-        rule.SetEnabled(true.into())
+        rule.SetEnabled(enabled.into())
             .map_err(SetRuleError::Enabled)?;
 
         Ok(())
