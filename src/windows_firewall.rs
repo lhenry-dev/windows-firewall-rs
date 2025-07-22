@@ -15,8 +15,7 @@ use crate::errors::{SetRuleError, WindowsFirewallError};
 use crate::firewall_enums::ProfileFirewallWindows;
 use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
 use crate::utils::{
-    convert_hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp,
-    with_com_initialized,
+    hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp, with_com_initialized,
 };
 use crate::DirectionFirewallWindows;
 
@@ -310,19 +309,19 @@ unsafe fn update_inetfw_rule(
             .map_err(SetRuleError::Protocol)?;
     }
     if let Some(local_ports) = &settings.local_ports {
-        rule.SetLocalPorts(&convert_hashset_to_bstr(Some(local_ports)))
+        rule.SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
             .map_err(SetRuleError::LocalPorts)?;
     }
     if let Some(remote_ports) = &settings.remote_ports {
-        rule.SetRemotePorts(&convert_hashset_to_bstr(Some(remote_ports)))
+        rule.SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
             .map_err(SetRuleError::RemotePorts)?;
     }
     if let Some(local_addresses) = &settings.local_addresses {
-        rule.SetLocalAddresses(&convert_hashset_to_bstr(Some(local_addresses)))
+        rule.SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
             .map_err(SetRuleError::LocalAddresses)?;
     }
     if let Some(remote_addresses) = &settings.remote_addresses {
-        rule.SetRemoteAddresses(&convert_hashset_to_bstr(Some(remote_addresses)))
+        rule.SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
             .map_err(SetRuleError::RemoteAddresses)?;
     }
     if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
@@ -342,7 +341,7 @@ unsafe fn update_inetfw_rule(
             .map_err(SetRuleError::Interfaces)?;
     }
     if let Some(interface_types) = &settings.interface_types {
-        rule.SetInterfaceTypes(&convert_hashset_to_bstr(Some(interface_types)))
+        rule.SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
             .map_err(SetRuleError::InterfaceTypes)?;
     }
     if let Some(profiles) = settings.profiles {
