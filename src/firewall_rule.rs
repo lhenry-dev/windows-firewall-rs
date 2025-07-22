@@ -502,6 +502,123 @@ impl WindowsFirewallRule {
     pub fn edge_traversal(&self) -> Option<bool> {
         self.edge_traversal
     }
+
+    /// Sets the name of the firewall rule.
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
+    /// Sets the direction of the firewall rule.
+    pub fn set_direction(&mut self, direction: DirectionFirewallWindows) -> &mut Self {
+        self.direction = direction;
+        self
+    }
+
+    /// Sets whether the firewall rule is enabled.
+    pub fn set_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.enabled = enabled;
+        self
+    }
+
+    /// Sets the action of the firewall rule.
+    pub fn set_action(&mut self, action: ActionFirewallWindows) -> &mut Self {
+        self.action = action;
+        self
+    }
+
+    /// Sets the description of the firewall rule.
+    pub fn set_description(&mut self, description: Option<impl Into<String>>) -> &mut Self {
+        self.description = description.map(|d| d.into());
+        self
+    }
+
+    /// Sets the application name for the firewall rule.
+    pub fn set_application_name(
+        &mut self,
+        application_name: Option<impl Into<String>>,
+    ) -> &mut Self {
+        self.application_name = application_name.map(|a| a.into());
+        self
+    }
+
+    /// Sets the service name for the firewall rule.
+    pub fn set_service_name(&mut self, service_name: Option<impl Into<String>>) -> &mut Self {
+        self.service_name = service_name.map(|s| s.into());
+        self
+    }
+
+    /// Sets the protocol for the firewall rule.
+    pub fn set_protocol(&mut self, protocol: Option<ProtocolFirewallWindows>) -> &mut Self {
+        self.protocol = protocol;
+        self
+    }
+
+    /// Sets the local ports for the firewall rule.
+    pub fn set_local_ports(&mut self, local_ports: Option<HashSet<u16>>) -> &mut Self {
+        self.local_ports = local_ports;
+        self
+    }
+
+    /// Sets the remote ports for the firewall rule.
+    pub fn set_remote_ports(&mut self, remote_ports: Option<HashSet<u16>>) -> &mut Self {
+        self.remote_ports = remote_ports;
+        self
+    }
+
+    /// Sets the local addresses for the firewall rule.
+    pub fn set_local_addresses(&mut self, local_addresses: Option<HashSet<IpAddr>>) -> &mut Self {
+        self.local_addresses = local_addresses;
+        self
+    }
+
+    /// Sets the remote addresses for the firewall rule.
+    pub fn set_remote_addresses(&mut self, remote_addresses: Option<HashSet<IpAddr>>) -> &mut Self {
+        self.remote_addresses = remote_addresses;
+        self
+    }
+
+    /// Sets the ICMP types and codes for the firewall rule.
+    pub fn set_icmp_types_and_codes(
+        &mut self,
+        icmp_types_and_codes: Option<impl Into<String>>,
+    ) -> &mut Self {
+        self.icmp_types_and_codes = icmp_types_and_codes.map(|i| i.into());
+        self
+    }
+
+    /// Sets the interfaces for the firewall rule.
+    pub fn set_interfaces(&mut self, interfaces: Option<HashSet<String>>) -> &mut Self {
+        self.interfaces = interfaces;
+        self
+    }
+
+    /// Sets the interface types for the firewall rule.
+    pub fn set_interface_types(
+        &mut self,
+        interface_types: Option<HashSet<InterfaceTypes>>,
+    ) -> &mut Self {
+        self.interface_types = interface_types;
+        self
+    }
+
+    /// Sets the grouping for the firewall rule.
+    pub fn set_grouping(&mut self, grouping: Option<impl Into<String>>) -> &mut Self {
+        self.grouping = grouping.map(|g| g.into());
+        self
+    }
+
+    /// Sets the profiles for the firewall rule.
+    pub fn set_profiles(&mut self, profiles: Option<ProfileFirewallWindows>) -> &mut Self {
+        self.profiles = profiles;
+        self
+    }
+
+    /// Sets whether edge traversal is enabled for the firewall rule.
+    pub fn set_edge_traversal(&mut self, edge_traversal: Option<bool>) -> &mut Self {
+        self.edge_traversal = edge_traversal;
+        self
+    }
 }
 
 impl TryFrom<INetFwRule> for WindowsFirewallRule {
