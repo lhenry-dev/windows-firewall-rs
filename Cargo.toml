@@ -1,7 +1,7 @@
 [package]
 name = "windows_firewall"
 authors = ["lhenry-dev <lhenry.dev1@gmail.com>"]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 rust-version = "1.82"
 description = "A crate for managing Windows Firewall rules and settings."
