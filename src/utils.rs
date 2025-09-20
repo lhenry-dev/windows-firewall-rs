@@ -8,14 +8,18 @@ use std::{
 };
 use windows::{
     core::{BSTR, PWSTR},
-    Win32::System::{
-        Com::{CoInitializeEx, CoUninitialize},
-        Ole::{SafeArrayCreateVector, SafeArrayDestroy, SafeArrayPutElement},
-        Variant::{
-            self, VariantInit, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT,
+    Win32::{
+        Foundation::GetLastError,
+        System::{
+            Com::{CoInitializeEx, CoUninitialize},
+            Ole::{SafeArrayCreateVector, SafeArrayDestroy, SafeArrayPutElement},
+            Variant::{
+                self, VariantInit, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT,
+            },
         },
     },
 };
+use windows_result::HRESULT;
 
 use crate::{constants::DWCOINIT, ProtocolFirewallWindows, WindowsFirewallError};
 
@@ -99,7 +103,10 @@ where
     let psa = unsafe { SafeArrayCreateVector(VT_VARIANT, 0, count) };
 
     if psa.is_null() {
-        return Err(windows_result::Error::from_win32());
+        let error = unsafe { GetLastError() };
+        return Err(windows_result::Error::from_hresult(HRESULT::from_win32(
+            error.0,
+        )));
     }
 
     for (i, item) in hashset.iter().enumerate() {

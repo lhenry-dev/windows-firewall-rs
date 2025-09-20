@@ -7,7 +7,7 @@
 [![Dependency Status](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs/status.svg)](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs)
 [![Documentation](https://docs.rs/windows_firewall/badge.svg)](https://docs.rs/windows_firewall)
 [![License](https://img.shields.io/crates/l/windows_firewall)](https://crates.io/crates/windows_firewall)
-[![MSRV](https://img.shields.io/badge/MSRV-1.78.0-dea584.svg?logo=rust)](https://github.com/rust-lang/rust/releases/tag/1.78.0)
+[![MSRV](https://img.shields.io/badge/MSRV-1.82.0-dea584.svg?logo=rust)](https://github.com/rust-lang/rust/releases/tag/1.82.0)
 [![codecov](https://codecov.io/gh/lhenry-dev/windows-firewall-rs/graph/badge.svg?token=WD7I8BR389)](https://codecov.io/gh/lhenry-dev/windows-firewall-rs)
 
 ---
@@ -176,6 +176,7 @@ match list_rules() {
 ## Support
 
 For issues and questions:
+
 - Open an issue on GitHub
 - Check the [documentation](https://docs.rs/windows_firewall)
 
@@ -183,9 +184,9 @@ For issues and questions:
 
 This project is licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   <https://www.apache.org/licenses/LICENSE-2.0>)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   <https://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+  <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  <https://opensource.org/licenses/MIT>)
 
 at your option.
