@@ -453,18 +453,19 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
     let mut rules_list = Vec::new();
 
-    with_com_initialized(|| unsafe {
-        let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
-        let fw_rules: INetFwRules = fw_policy.Rules()?;
-        let rules_count = fw_rules.Count()?;
+    with_com_initialized(|| {
+        let fw_policy: INetFwPolicy2 =
+            unsafe { CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT) }?;
+        let fw_rules: INetFwRules = unsafe { fw_policy.Rules() }?;
+        let rules_count = unsafe { fw_rules.Count() }?;
 
-        let enumerator = fw_rules._NewEnum()?.cast::<IEnumVARIANT>()?;
+        let enumerator = unsafe { fw_rules._NewEnum() }?.cast::<IEnumVARIANT>()?;
 
         let mut variants: [VARIANT; 1] = Default::default();
         let mut pceltfetch: u32 = 0;
 
         for _ in 0..rules_count {
-            let fetched = enumerator.Next(&mut variants, &mut pceltfetch);
+            let fetched = unsafe { enumerator.Next(&mut variants, &mut pceltfetch) };
 
             if fetched.is_err() {
                 error!("Error while fetching rules");
@@ -472,10 +473,10 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
             };
 
             if let Some(variant) = variants.first() {
-                let dispatch = variant.Anonymous.Anonymous.Anonymous.pdispVal.clone();
+                let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.clone() };
 
                 let _dispatch_cleanup = guard(dispatch.clone(), |mut d| {
-                    ManuallyDrop::drop(&mut d);
+                    unsafe { ManuallyDrop::drop(&mut d) };
                 });
 
                 if let Some(dispatch) = dispatch.as_ref() {

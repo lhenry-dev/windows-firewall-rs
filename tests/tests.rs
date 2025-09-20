@@ -79,6 +79,36 @@ fn test_set_firewall_state() {
 }
 
 #[test]
+#[serial]
+fn test_list_rules() {
+    let rule = WindowsFirewallRule::builder()
+        .name(RULE_NAME)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true)
+        .description("Allow inbound HTTP traffic")
+        .protocol(ProtocolFirewallWindows::Tcp)
+        .local_ports([80, 65535])
+        .build();
+
+    add_rule(&rule).expect("Failed to add firewall rule");
+
+    let rules = list_rules();
+    assert!(rules.is_ok(), "Failed to list outgoing rules");
+
+    let rules = rules.unwrap();
+
+    let found = rules.iter().any(|r| r.name() == RULE_NAME);
+    assert!(
+        found,
+        "Firewall rule '{}' not found in list_rules() output",
+        RULE_NAME
+    );
+
+    remove_rule(RULE_NAME).expect("Failed to remove firewall rule");
+}
+
+#[test]
 fn test_list_incoming_rules() {
     let rules = list_incoming_rules();
     assert!(rules.is_ok(), "Failed to list incoming rules");
@@ -97,19 +127,19 @@ fn test_firewall_rules_conversion() {
 
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
-
-        let _com_cleanup = guard((), |()| CoUninitialize());
-
-        let inetfw_rules = firewall_rules
-            .iter()
-            .map(|rule| INetFwRule::try_from(rule).expect("Failed to convert to INetFwRule"));
-
-        assert_eq!(
-            firewall_rules.len(),
-            inetfw_rules.len(),
-            "Conversion changed the number of rules!"
-        );
     }
+
+    let _com_cleanup = guard((), |()| unsafe { CoUninitialize() });
+
+    let inetfw_rules = firewall_rules
+        .iter()
+        .map(|rule| INetFwRule::try_from(rule).expect("Failed to convert to INetFwRule"));
+
+    assert_eq!(
+        firewall_rules.len(),
+        inetfw_rules.len(),
+        "Conversion changed the number of rules!"
+    );
 }
 
 #[test]

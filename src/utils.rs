@@ -95,74 +95,74 @@ where
         return Ok(VARIANT::default());
     }
 
-    unsafe {
-        let count = u32::try_from(hashset.len())?;
-        let psa = SafeArrayCreateVector(VT_VARIANT, 0, count);
+    let count = u32::try_from(hashset.len())?;
+    let psa = unsafe { SafeArrayCreateVector(VT_VARIANT, 0, count) };
 
-        if psa.is_null() {
-            return Err(windows_result::Error::from_win32());
-        }
+    if psa.is_null() {
+        return Err(windows_result::Error::from_win32());
+    }
 
-        for (i, item) in hashset.iter().enumerate() {
-            let bstr = BSTR::from(item.to_string());
-            let mut vt_element = VariantInit();
+    for (i, item) in hashset.iter().enumerate() {
+        let bstr = BSTR::from(item.to_string());
+        let mut vt_element = unsafe { VariantInit() };
 
+        unsafe {
             (*vt_element.Anonymous.Anonymous).vt = VT_BSTR;
             (*vt_element.Anonymous.Anonymous).Anonymous.bstrVal = ManuallyDrop::new(bstr);
+        }
 
-            let hr = SafeArrayPutElement(
+        let hr = unsafe {
+            SafeArrayPutElement(
                 psa,
                 from_ref(&i32::try_from(i)?).cast(),
                 addr_of!(vt_element).cast::<std::ffi::c_void>(),
-            );
+            )
+        };
 
-            if let Err(e) = hr {
-                SafeArrayDestroy(psa)?;
-                return Err(e);
-            }
+        if let Err(e) = hr {
+            unsafe { SafeArrayDestroy(psa) }?;
+            return Err(e);
         }
+    }
 
-        let mut variant = VariantInit();
+    let mut variant = unsafe { VariantInit() };
+    unsafe {
         (*variant.Anonymous.Anonymous).vt = VT_ARRAY | VT_VARIANT;
         (*variant.Anonymous.Anonymous).Anonymous.parray = psa;
-
-        Ok(variant)
     }
+
+    Ok(variant)
 }
 
 pub fn variant_to_hashset(variant: &VARIANT) -> windows::core::Result<HashSet<String>> {
-    unsafe {
-        let count = Variant::VariantGetElementCount(variant);
+    let count = unsafe { Variant::VariantGetElementCount(variant) };
 
-        if count == 0 {
-            return Ok(HashSet::new());
-        }
-
-        let pwstr: PWSTR = VariantToStringAlloc(variant)?;
-        let wide_cstr = pwstr.to_string()?;
-
-        let hashset = wide_cstr.split("; ").map(str::to_string).collect();
-
-        Ok(hashset)
+    if count == 0 {
+        return Ok(HashSet::new());
     }
+
+    let pwstr: PWSTR = unsafe { VariantToStringAlloc(variant) }?;
+    let wide_cstr = unsafe { pwstr.to_string() }?;
+
+    let hashset = wide_cstr.split("; ").map(str::to_string).collect();
+
+    Ok(hashset)
 }
 
 pub fn with_com_initialized<F, R>(f: F) -> Result<R, WindowsFirewallError>
 where
     F: FnOnce() -> Result<R, WindowsFirewallError>,
 {
-    unsafe {
-        let hr_com_init = CoInitializeEx(None, DWCOINIT);
-        if hr_com_init.is_err() {
-            return Err(WindowsFirewallError::CoInitializeExFailed(
-                hr_com_init.message(),
-            ));
-        }
-
-        let _com_cleanup = guard((), |()| CoUninitialize());
-
-        f()
+    let hr_com_init = unsafe { CoInitializeEx(None, DWCOINIT) };
+    if hr_com_init.is_err() {
+        return Err(WindowsFirewallError::CoInitializeExFailed(
+            hr_com_init.message(),
+        ));
     }
+
+    let _com_cleanup = guard((), |()| unsafe { CoUninitialize() });
+
+    f()
 }
 
 #[cfg(test)]
