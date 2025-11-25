@@ -7,7 +7,7 @@
 [![Dependency Status](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs/status.svg)](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs)
 [![Documentation](https://docs.rs/windows_firewall/badge.svg)](https://docs.rs/windows_firewall)
 [![License](https://img.shields.io/crates/l/windows_firewall)](https://crates.io/crates/windows_firewall)
-[![MSRV](https://img.shields.io/badge/MSRV-1.82.0-dea584.svg?logo=rust)](https://github.com/rust-lang/rust/releases/tag/1.82.0)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?logo=rust)](https://github.com/rust-lang/rust/releases/tag/1.88.0)
 [![codecov](https://codecov.io/gh/lhenry-dev/windows-firewall-rs/graph/badge.svg?token=WD7I8BR389)](https://codecov.io/gh/lhenry-dev/windows-firewall-rs)
 
 ---
