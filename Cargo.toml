@@ -23,6 +23,7 @@ targets = [
 ]
 
 [dependencies]
+getset = "0.1.6"
 scopeguard = "1.2.0"
 thiserror = "2.0.16"
 tracing = "0.1.41"

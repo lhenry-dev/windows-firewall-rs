@@ -1,3 +1,4 @@
+use getset::{Getters, Setters};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
@@ -60,82 +61,82 @@ use crate::{add_rule, add_rule_if_not_exists, enable_rule, InterfaceTypes};
 ///
 /// println!("Firewall Rule: {:?}", rule);
 /// ```
-#[derive(Debug, Clone, TypedBuilder)]
+#[derive(Debug, Clone, Getters, Setters, TypedBuilder)]
 pub struct WindowsFirewallRule {
     /// The user-friendly name of the rule. It must not contain the "|" character and cannot be "all".
     #[builder(setter(into))]
+    #[getset(get = "pub", set = "pub")]
     name: String,
-
     /// The direction of the traffic this rule applies to (e.g., inbound or outbound).
     #[builder(setter(into))]
+    #[getset(get = "pub", set = "pub")]
     direction: DirectionFirewallWindows,
-
     /// Indicates whether the rule is enabled (active) or disabled.
     #[builder(setter(into))]
+    #[getset(get = "pub", set = "pub")]
     enabled: bool,
-
     /// The action to take when the rule conditions are met (e.g., allow or block).
     #[builder(setter(into))]
+    #[getset(get = "pub", set = "pub")]
     action: ActionFirewallWindows,
-
     /// A brief description of the rule's purpose or function. Must not contain the "|" character.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     description: Option<String>,
-
     /// The name of the application to which this rule applies.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     application_name: Option<String>,
-
     /// The service name associated with the application for this rule.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     service_name: Option<String>,
-
     /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     protocol: Option<ProtocolFirewallWindows>,
-
     /// A set of local ports this rule applies to. For example, specify ports like 80 or 443.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     local_ports: Option<HashSet<u16>>,
-
     /// A set of remote ports this rule applies to.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     remote_ports: Option<HashSet<u16>>,
-
     /// A set of local IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    #[getset(get = "pub", set = "pub")]
     local_addresses: Option<HashSet<IpAddr>>,
-
     /// A set of remote IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    #[getset(get = "pub", set = "pub")]
     remote_addresses: Option<HashSet<IpAddr>>,
-
     /// A list of ICMP types and codes this rule applies to, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     icmp_types_and_codes: Option<String>,
-
     /// A list of network interfaces this rule applies to, identified by their friendly names.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
+    #[getset(get = "pub", set = "pub")]
     interfaces: Option<HashSet<String>>,
-
     /// A list of interface types this rule applies to (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
+    #[getset(get = "pub", set = "pub")]
     interface_types: Option<HashSet<InterfaceTypes>>,
-
     /// The group name this rule belongs to, used for organizing rules.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     grouping: Option<String>,
-
     /// The profiles this rule is associated with (e.g., Domain, Private, Public).
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     profiles: Option<ProfileFirewallWindows>,
-
     /// Indicates whether edge traversal is enabled, allowing traffic to bypass NAT devices.
     #[builder(default, setter(strip_option, into))]
+    #[getset(get = "pub", set = "pub")]
     edge_traversal: Option<bool>,
 }
 
-#[allow(clippy::must_use_candidate)]
 impl WindowsFirewallRule {
     /// Adds a new firewall rule to the system.
     ///
@@ -410,213 +411,6 @@ impl WindowsFirewallRule {
     pub fn exists(&self) -> Result<bool, WindowsFirewallError> {
         rule_exists(&self.name)
     }
-
-    /// Returns the name of the firewall rule
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Returns the direction of the firewall rule (inbound or outbound)
-    pub fn direction(&self) -> &DirectionFirewallWindows {
-        &self.direction
-    }
-
-    /// Returns whether the firewall rule is enabled or not
-    pub fn enabled(&self) -> bool {
-        self.enabled
-    }
-
-    /// Returns the action to be taken by the firewall rule (allow/block)
-    pub fn action(&self) -> &ActionFirewallWindows {
-        &self.action
-    }
-
-    /// Returns the description of the firewall rule, if available
-    pub fn description(&self) -> Option<&String> {
-        self.description.as_ref()
-    }
-
-    /// Returns the application name associated with the firewall rule, if available
-    pub fn application_name(&self) -> Option<&String> {
-        self.application_name.as_ref()
-    }
-
-    /// Returns the service name associated with the firewall rule, if available
-    pub fn service_name(&self) -> Option<&String> {
-        self.service_name.as_ref()
-    }
-
-    /// Returns the protocol used by the firewall rule, if available
-    pub fn protocol(&self) -> Option<&ProtocolFirewallWindows> {
-        self.protocol.as_ref()
-    }
-
-    /// Returns the set of local ports associated with the firewall rule, if available
-    pub fn local_ports(&self) -> Option<&HashSet<u16>> {
-        self.local_ports.as_ref()
-    }
-
-    /// Returns the set of remote ports associated with the firewall rule, if available
-    pub fn remote_ports(&self) -> Option<&HashSet<u16>> {
-        self.remote_ports.as_ref()
-    }
-
-    /// Returns the set of local addresses associated with the firewall rule, if available
-    pub fn local_addresses(&self) -> Option<&HashSet<IpAddr>> {
-        self.local_addresses.as_ref()
-    }
-
-    /// Returns the set of remote addresses associated with the firewall rule, if available
-    pub fn remote_addresses(&self) -> Option<&HashSet<IpAddr>> {
-        self.remote_addresses.as_ref()
-    }
-
-    /// Returns the ICMP types and codes associated with the rule, if available
-    pub fn icmp_types_and_codes(&self) -> Option<&String> {
-        self.icmp_types_and_codes.as_ref()
-    }
-
-    /// Returns the set of interfaces associated with the firewall rule, if available
-    pub fn interfaces(&self) -> Option<&HashSet<String>> {
-        self.interfaces.as_ref()
-    }
-
-    /// Returns the set of interface types associated with the firewall rule, if available
-    pub fn interface_types(&self) -> Option<&HashSet<InterfaceTypes>> {
-        self.interface_types.as_ref()
-    }
-
-    /// Returns the grouping of the rule, if available
-    pub fn grouping(&self) -> Option<&String> {
-        self.grouping.as_ref()
-    }
-
-    /// Returns the profiles associated with the firewall rule, if available
-    pub fn profiles(&self) -> Option<&ProfileFirewallWindows> {
-        self.profiles.as_ref()
-    }
-
-    /// Returns whether edge traversal is allowed by the rule
-    pub fn edge_traversal(&self) -> Option<bool> {
-        self.edge_traversal
-    }
-
-    /// Sets the name of the firewall rule.
-    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
-        self.name = name.into();
-        self
-    }
-
-    /// Sets the direction of the firewall rule.
-    pub fn set_direction(&mut self, direction: DirectionFirewallWindows) -> &mut Self {
-        self.direction = direction;
-        self
-    }
-
-    /// Sets whether the firewall rule is enabled.
-    pub fn set_enabled(&mut self, enabled: bool) -> &mut Self {
-        self.enabled = enabled;
-        self
-    }
-
-    /// Sets the action of the firewall rule.
-    pub fn set_action(&mut self, action: ActionFirewallWindows) -> &mut Self {
-        self.action = action;
-        self
-    }
-
-    /// Sets the description of the firewall rule.
-    pub fn set_description(&mut self, description: Option<impl Into<String>>) -> &mut Self {
-        self.description = description.map(|d| d.into());
-        self
-    }
-
-    /// Sets the application name for the firewall rule.
-    pub fn set_application_name(
-        &mut self,
-        application_name: Option<impl Into<String>>,
-    ) -> &mut Self {
-        self.application_name = application_name.map(|a| a.into());
-        self
-    }
-
-    /// Sets the service name for the firewall rule.
-    pub fn set_service_name(&mut self, service_name: Option<impl Into<String>>) -> &mut Self {
-        self.service_name = service_name.map(|s| s.into());
-        self
-    }
-
-    /// Sets the protocol for the firewall rule.
-    pub fn set_protocol(&mut self, protocol: Option<ProtocolFirewallWindows>) -> &mut Self {
-        self.protocol = protocol;
-        self
-    }
-
-    /// Sets the local ports for the firewall rule.
-    pub fn set_local_ports(&mut self, local_ports: Option<HashSet<u16>>) -> &mut Self {
-        self.local_ports = local_ports;
-        self
-    }
-
-    /// Sets the remote ports for the firewall rule.
-    pub fn set_remote_ports(&mut self, remote_ports: Option<HashSet<u16>>) -> &mut Self {
-        self.remote_ports = remote_ports;
-        self
-    }
-
-    /// Sets the local addresses for the firewall rule.
-    pub fn set_local_addresses(&mut self, local_addresses: Option<HashSet<IpAddr>>) -> &mut Self {
-        self.local_addresses = local_addresses;
-        self
-    }
-
-    /// Sets the remote addresses for the firewall rule.
-    pub fn set_remote_addresses(&mut self, remote_addresses: Option<HashSet<IpAddr>>) -> &mut Self {
-        self.remote_addresses = remote_addresses;
-        self
-    }
-
-    /// Sets the ICMP types and codes for the firewall rule.
-    pub fn set_icmp_types_and_codes(
-        &mut self,
-        icmp_types_and_codes: Option<impl Into<String>>,
-    ) -> &mut Self {
-        self.icmp_types_and_codes = icmp_types_and_codes.map(|i| i.into());
-        self
-    }
-
-    /// Sets the interfaces for the firewall rule.
-    pub fn set_interfaces(&mut self, interfaces: Option<HashSet<String>>) -> &mut Self {
-        self.interfaces = interfaces;
-        self
-    }
-
-    /// Sets the interface types for the firewall rule.
-    pub fn set_interface_types(
-        &mut self,
-        interface_types: Option<HashSet<InterfaceTypes>>,
-    ) -> &mut Self {
-        self.interface_types = interface_types;
-        self
-    }
-
-    /// Sets the grouping for the firewall rule.
-    pub fn set_grouping(&mut self, grouping: Option<impl Into<String>>) -> &mut Self {
-        self.grouping = grouping.map(|g| g.into());
-        self
-    }
-
-    /// Sets the profiles for the firewall rule.
-    pub fn set_profiles(&mut self, profiles: Option<ProfileFirewallWindows>) -> &mut Self {
-        self.profiles = profiles;
-        self
-    }
-
-    /// Sets whether edge traversal is enabled for the firewall rule.
-    pub fn set_edge_traversal(&mut self, edge_traversal: Option<bool>) -> &mut Self {
-        self.edge_traversal = edge_traversal;
-        self
-    }
 }
 
 impl TryFrom<INetFwRule> for WindowsFirewallRule {
@@ -786,71 +580,54 @@ pub struct WindowsFirewallRuleSettings {
     /// The name of the firewall rule. Must not contain the "|" character and cannot be "all".
     #[builder(default, setter(strip_option, into))]
     pub(crate) name: Option<String>,
-
     /// The direction of the firewall rule (inbound or outbound).
     #[builder(default, setter(strip_option, into))]
     pub(crate) direction: Option<DirectionFirewallWindows>,
-
     /// Indicates whether the firewall rule is enabled.
     #[builder(default, setter(strip_option, into))]
     pub(crate) enabled: Option<bool>,
-
     /// The action to be taken by the firewall rule (allow or block).
     #[builder(default, setter(strip_option, into))]
     pub(crate) action: Option<ActionFirewallWindows>,
-
     /// A brief description of the firewall rule. Must not contain the "|" character.
     #[builder(default, setter(strip_option, into))]
     pub(crate) description: Option<String>,
-
     /// The application name associated with the firewall rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) application_name: Option<String>,
-
     /// The service name associated with the firewall rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) service_name: Option<String>,
-
     /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
     pub(crate) protocol: Option<ProtocolFirewallWindows>,
-
     /// A set of local ports associated with the firewall rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) local_ports: Option<HashSet<u16>>,
-
     /// A set of remote ports associated with the firewall rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) remote_ports: Option<HashSet<u16>>,
-
     /// A set of local addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
     pub(crate) local_addresses: Option<HashSet<IpAddr>>,
-
     /// A set of remote addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
     pub(crate) remote_addresses: Option<HashSet<IpAddr>>,
-
     /// The ICMP types and codes associated with the rule, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) icmp_types_and_codes: Option<String>,
-
     /// A set of interfaces associated with the firewall rule.
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
     pub(crate) interfaces: Option<HashSet<String>>,
-
     /// A set of interface types associated with the firewall rule (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
     pub(crate) interface_types: Option<HashSet<InterfaceTypes>>,
-
     /// The grouping of the rule, used for organizing rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) grouping: Option<String>,
-
     /// The profiles associated with the firewall rule (e.g., Domain, Private, Public).
     #[builder(default, setter(strip_option, into))]
     pub(crate) profiles: Option<ProfileFirewallWindows>,
-
     /// Indicates whether edge traversal is allowed by the rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) edge_traversal: Option<bool>,
@@ -897,7 +674,7 @@ mod tests {
             .enabled(false)
             .build();
 
-        rule.set_name("new_name");
+        rule.set_name("new_name".to_string());
         assert_eq!(rule.name(), "new_name");
 
         rule.set_direction(DirectionFirewallWindows::In);
@@ -911,102 +688,102 @@ mod tests {
 
         let desc: Option<String> = Some("desc".to_string());
         rule.set_description(desc);
-        assert_eq!(rule.description(), Some(&"desc".to_string()));
+        assert_eq!(*rule.description(), Some("desc".to_string()));
         rule.set_description(None::<String>);
-        assert_eq!(rule.description(), None);
+        assert_eq!(*rule.description(), None);
 
         // set_application_name
         let app: Option<String> = Some("app.exe".to_string());
         rule.set_application_name(app);
-        assert_eq!(rule.application_name(), Some(&"app.exe".to_string()));
+        assert_eq!(*rule.application_name(), Some("app.exe".to_string()));
         rule.set_application_name(None::<String>);
-        assert_eq!(rule.application_name(), None);
+        assert_eq!(*rule.application_name(), None);
 
         // set_service_name
         let svc: Option<String> = Some("svc".to_string());
         rule.set_service_name(svc);
-        assert_eq!(rule.service_name(), Some(&"svc".to_string()));
+        assert_eq!(*rule.service_name(), Some("svc".to_string()));
         rule.set_service_name(None::<String>);
-        assert_eq!(rule.service_name(), None);
+        assert_eq!(*rule.service_name(), None);
 
         // set_protocol
         rule.set_protocol(Some(ProtocolFirewallWindows::Tcp));
-        assert_eq!(rule.protocol(), Some(&ProtocolFirewallWindows::Tcp));
+        assert_eq!(*rule.protocol(), Some(ProtocolFirewallWindows::Tcp));
         rule.set_protocol(None);
-        assert_eq!(rule.protocol(), None);
+        assert_eq!(*rule.protocol(), None);
 
         // set_local_ports
         let mut ports = HashSet::new();
         ports.insert(80);
         rule.set_local_ports(Some(ports.clone()));
-        assert_eq!(rule.local_ports(), Some(&ports));
+        assert_eq!(*rule.local_ports(), Some(ports));
         rule.set_local_ports(None);
-        assert_eq!(rule.local_ports(), None);
+        assert_eq!(*rule.local_ports(), None);
 
         // set_remote_ports
         let mut rports = HashSet::new();
         rports.insert(443);
         rule.set_remote_ports(Some(rports.clone()));
-        assert_eq!(rule.remote_ports(), Some(&rports));
+        assert_eq!(*rule.remote_ports(), Some(rports));
         rule.set_remote_ports(None);
-        assert_eq!(rule.remote_ports(), None);
+        assert_eq!(*rule.remote_ports(), None);
 
         // set_local_addresses
         let mut addrs = HashSet::new();
         addrs.insert(IpAddr::from_str("127.0.0.1").unwrap());
         rule.set_local_addresses(Some(addrs.clone()));
-        assert_eq!(rule.local_addresses(), Some(&addrs));
+        assert_eq!(*rule.local_addresses(), Some(addrs));
         rule.set_local_addresses(None);
-        assert_eq!(rule.local_addresses(), None);
+        assert_eq!(*rule.local_addresses(), None);
 
         // set_remote_addresses
         let mut raddrs = HashSet::new();
         raddrs.insert(IpAddr::from_str("8.8.8.8").unwrap());
         rule.set_remote_addresses(Some(raddrs.clone()));
-        assert_eq!(rule.remote_addresses(), Some(&raddrs));
+        assert_eq!(*rule.remote_addresses(), Some(raddrs));
         rule.set_remote_addresses(None);
-        assert_eq!(rule.remote_addresses(), None);
+        assert_eq!(*rule.remote_addresses(), None);
 
         // set_icmp_types_and_codes
         let icmp: Option<String> = Some("8:0".to_string());
         rule.set_icmp_types_and_codes(icmp);
-        assert_eq!(rule.icmp_types_and_codes(), Some(&"8:0".to_string()));
+        assert_eq!(*rule.icmp_types_and_codes(), Some("8:0".to_string()));
         rule.set_icmp_types_and_codes(None::<String>);
-        assert_eq!(rule.icmp_types_and_codes(), None);
+        assert_eq!(*rule.icmp_types_and_codes(), None);
 
         // set_interfaces
         let mut interfaces = HashSet::new();
         interfaces.insert("Wi-Fi".to_string());
         rule.set_interfaces(Some(interfaces.clone()));
-        assert_eq!(rule.interfaces(), Some(&interfaces));
+        assert_eq!(*rule.interfaces(), Some(interfaces));
         rule.set_interfaces(None);
-        assert_eq!(rule.interfaces(), None);
+        assert_eq!(*rule.interfaces(), None);
 
         // set_interface_types
         let mut iftypes = HashSet::new();
         iftypes.insert(InterfaceTypes::Lan);
         rule.set_interface_types(Some(iftypes.clone()));
-        assert_eq!(rule.interface_types(), Some(&iftypes));
+        assert_eq!(*rule.interface_types(), Some(iftypes));
         rule.set_interface_types(None);
-        assert_eq!(rule.interface_types(), None);
+        assert_eq!(*rule.interface_types(), None);
 
         // set_grouping
         let group: Option<String> = Some("group".to_string());
         rule.set_grouping(group);
-        assert_eq!(rule.grouping(), Some(&"group".to_string()));
+        assert_eq!(*rule.grouping(), Some("group".to_string()));
         rule.set_grouping(None::<String>);
-        assert_eq!(rule.grouping(), None);
+        assert_eq!(*rule.grouping(), None);
 
         // set_profiles
         rule.set_profiles(Some(ProfileFirewallWindows::Private));
-        assert_eq!(rule.profiles(), Some(&ProfileFirewallWindows::Private));
+        assert_eq!(*rule.profiles(), Some(ProfileFirewallWindows::Private));
         rule.set_profiles(None);
-        assert_eq!(rule.profiles(), None);
+        assert_eq!(*rule.profiles(), None);
 
         // set_edge_traversal
         rule.set_edge_traversal(Some(true));
-        assert_eq!(rule.edge_traversal(), Some(true));
+        assert_eq!(*rule.edge_traversal(), Some(true));
         rule.set_edge_traversal(None);
-        assert_eq!(rule.edge_traversal(), None);
+        assert_eq!(*rule.edge_traversal(), None);
     }
 }

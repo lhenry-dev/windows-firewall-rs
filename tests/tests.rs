@@ -415,23 +415,23 @@ fn test_tcp_windows_firewall_rule_conversion() {
     assert_eq!(result.name(), RULE_NAME);
     assert_eq!(*result.action(), rule_action);
     assert_eq!(*result.direction(), rule_direction);
-    assert_eq!(result.enabled(), rule_enabled);
-    assert_eq!(result.description(), Some(&rule_description.to_string()));
+    assert_eq!(*result.enabled(), rule_enabled);
+    assert_eq!(*result.description(), Some(rule_description.to_string()));
     assert_eq!(
-        result.application_name(),
-        Some(&rule_application_name.to_string())
+        *result.application_name(),
+        Some(rule_application_name.to_string())
     );
-    assert_eq!(result.service_name(), Some(&rule_service_name.to_string()));
-    assert_eq!(result.protocol(), Some(rule_protocol).as_ref());
-    assert_eq!(result.local_ports(), Some(&to_hashset(rule_local_ports)));
-    assert_eq!(result.remote_ports(), Some(&to_hashset(rule_remote_ports)));
+    assert_eq!(*result.service_name(), Some(rule_service_name.to_string()));
+    assert_eq!(*result.protocol(), Some(rule_protocol));
+    assert_eq!(*result.local_ports(), Some(to_hashset(rule_local_ports)));
+    assert_eq!(*result.remote_ports(), Some(to_hashset(rule_remote_ports)));
     assert_eq!(
-        result.local_addresses(),
-        Some(&to_hashset(rule_local_addresses))
+        *result.local_addresses(),
+        Some(to_hashset(rule_local_addresses))
     );
     assert_eq!(
-        result.remote_addresses(),
-        Some(&to_hashset(rule_remote_addresses))
+        *result.remote_addresses(),
+        Some(to_hashset(rule_remote_addresses))
     );
     // // it causes a panic if the interface doesn't exist
     // assert_eq!(
@@ -439,12 +439,12 @@ fn test_tcp_windows_firewall_rule_conversion() {
     //     to_string_hashset_option(rule_interfaces).as_ref()
     // );
     assert_eq!(
-        result.interface_types(),
-        Some(&to_hashset(rule_interface_types))
+        *result.interface_types(),
+        Some(to_hashset(rule_interface_types))
     );
-    assert_eq!(result.grouping(), Some(&rule_grouping.to_string()));
-    assert_eq!(result.profiles(), Some(rule_profiles).as_ref());
-    assert_eq!(result.edge_traversal(), Some(rule_edge_traversal));
+    assert_eq!(*result.grouping(), Some(rule_grouping.to_string()));
+    assert_eq!(*result.profiles(), Some(rule_profiles));
+    assert_eq!(*result.edge_traversal(), Some(rule_edge_traversal));
 
     remove_rule(RULE_NAME).expect("Failed to remove firewall rule");
 
@@ -508,25 +508,25 @@ fn test_icmpv4_firewall_rule_conversion() {
     assert_eq!(result.name(), RULE_NAME);
     assert_eq!(*result.action(), rule_action);
     assert_eq!(*result.direction(), rule_direction);
-    assert_eq!(result.enabled(), rule_enabled);
-    assert_eq!(result.description(), Some(&rule_description.to_string()));
+    assert_eq!(*result.enabled(), rule_enabled);
+    assert_eq!(*result.description(), Some(rule_description.to_string()));
     assert_eq!(
-        result.application_name(),
-        Some(&rule_application_name.to_string())
+        *result.application_name(),
+        Some(rule_application_name.to_string())
     );
-    assert_eq!(result.service_name(), Some(&rule_service_name.to_string()));
-    assert_eq!(result.protocol(), Some(rule_protocol).as_ref());
+    assert_eq!(*result.service_name(), Some(rule_service_name.to_string()));
+    assert_eq!(*result.protocol(), Some(rule_protocol));
     assert_eq!(
-        result.local_addresses(),
-        Some(&to_hashset(rule_local_addresses))
-    );
-    assert_eq!(
-        result.remote_addresses(),
-        Some(&to_hashset(rule_remote_addresses))
+        *result.local_addresses(),
+        Some(to_hashset(rule_local_addresses))
     );
     assert_eq!(
-        result.icmp_types_and_codes(),
-        Some(&rule_icmp_types_and_codes.to_string())
+        *result.remote_addresses(),
+        Some(to_hashset(rule_remote_addresses))
+    );
+    assert_eq!(
+        *result.icmp_types_and_codes(),
+        Some(rule_icmp_types_and_codes.to_string())
     );
     // // it causes a panic if the interface doesn't exist
     // assert_eq!(
@@ -534,12 +534,12 @@ fn test_icmpv4_firewall_rule_conversion() {
     //     to_string_hashset_option(rule_interfaces).as_ref()
     // );
     assert_eq!(
-        result.interface_types(),
-        Some(&to_hashset(rule_interface_types))
+        *result.interface_types(),
+        Some(to_hashset(rule_interface_types))
     );
-    assert_eq!(result.grouping(), Some(&rule_grouping.to_string()));
-    assert_eq!(result.profiles(), Some(rule_profiles).as_ref());
-    assert_eq!(result.edge_traversal(), Some(rule_edge_traversal));
+    assert_eq!(*result.grouping(), Some(rule_grouping.to_string()));
+    assert_eq!(*result.profiles(), Some(rule_profiles));
+    assert_eq!(*result.edge_traversal(), Some(rule_edge_traversal));
 
     remove_rule(RULE_NAME).expect("Failed to remove ICMPv4 firewall rule");
 
@@ -590,18 +590,18 @@ fn test_tcp_to_icmp_rule_conversion() {
     let result = get_rule(RULE_NAME).expect("Failed to retrieve ICMP rule");
 
     assert_eq!(result.name(), RULE_NAME);
-    assert_eq!(result.protocol(), Some(rule_protocol_icmp).as_ref());
+    assert_eq!(*result.protocol(), Some(rule_protocol_icmp));
     assert_eq!(
-        result.icmp_types_and_codes(),
-        Some(&rule_icmp_types_and_codes.to_string())
+        *result.icmp_types_and_codes(),
+        Some(rule_icmp_types_and_codes.to_string())
     );
     assert_eq!(
-        result.local_addresses(),
-        Some(&to_hashset(rule_local_addresses))
+        *result.local_addresses(),
+        Some(to_hashset(rule_local_addresses))
     );
     assert_eq!(
-        result.remote_addresses(),
-        Some(&to_hashset(rule_remote_addresses))
+        *result.remote_addresses(),
+        Some(to_hashset(rule_remote_addresses))
     );
 
     remove_rule(RULE_NAME).expect("Failed to remove ICMPv4 firewall rule");
@@ -656,18 +656,18 @@ fn test_tcp_to_icmp_rule_conversion_2() {
     let result = get_rule(RULE_NAME).expect("Failed to retrieve ICMP rule");
 
     assert_eq!(result.name(), RULE_NAME);
-    assert_eq!(result.protocol(), Some(rule_protocol_icmp).as_ref());
+    assert_eq!(*result.protocol(), Some(rule_protocol_icmp));
     assert_eq!(
-        result.icmp_types_and_codes(),
-        Some(&rule_icmp_types_and_codes.to_string())
+        *result.icmp_types_and_codes(),
+        Some(rule_icmp_types_and_codes.to_string())
     );
     assert_eq!(
-        result.local_addresses(),
-        Some(&to_hashset(rule_local_addresses))
+        *result.local_addresses(),
+        Some(to_hashset(rule_local_addresses))
     );
     assert_eq!(
-        result.remote_addresses(),
-        Some(&to_hashset(rule_remote_addresses))
+        *result.remote_addresses(),
+        Some(to_hashset(rule_remote_addresses))
     );
 
     remove_rule(RULE_NAME).expect("Failed to remove ICMP firewall rule");
@@ -729,23 +729,23 @@ fn test_update_firewall_rule() {
 
     assert_eq!(result.name(), RULE_NAME);
     assert_eq!(result.action(), &new_rule_action);
-    assert_eq!(result.protocol(), Some(new_rule_protocol).as_ref());
+    assert_eq!(*result.protocol(), Some(new_rule_protocol));
     assert_eq!(
-        result.icmp_types_and_codes(),
-        Some(&new_icmp_types_and_codes.to_string())
+        *result.icmp_types_and_codes(),
+        Some(new_icmp_types_and_codes.to_string())
     );
     assert_eq!(
-        result.description(),
-        Some(&new_rule_description.to_string())
+        *result.description(),
+        Some(new_rule_description.to_string())
     );
-    assert_eq!(result.enabled(), new_rule_enabled);
+    assert_eq!(*result.enabled(), new_rule_enabled);
     assert_eq!(
-        result.local_addresses(),
-        Some(&to_hashset(rule_local_addresses))
+        *result.local_addresses(),
+        Some(to_hashset(rule_local_addresses))
     );
     assert_eq!(
-        result.remote_addresses(),
-        Some(&to_hashset(rule_remote_addresses))
+        *result.remote_addresses(),
+        Some(to_hashset(rule_remote_addresses))
     );
 
     remove_rule(RULE_NAME).expect("Failed to remove updated firewall rule");
@@ -810,36 +810,33 @@ fn test_update_firewall_rule_with_all_parameters() {
     assert_eq!(updated_rule.direction(), &DirectionFirewallWindows::In);
     assert!(!updated_rule.enabled());
     assert_eq!(
-        updated_rule.description(),
-        Some(&"Block outbound TCP traffic".to_string())
+        *updated_rule.description(),
+        Some("Block outbound TCP traffic".to_string())
     );
     assert_eq!(
-        updated_rule.application_name(),
-        Some(&"C:\\Program Files\\NewApp\\new_app.exe".to_string())
+        *updated_rule.application_name(),
+        Some("C:\\Program Files\\NewApp\\new_app.exe".to_string())
     );
-    assert_eq!(updated_rule.service_name(), Some(&"NewService".to_string()));
+    assert_eq!(*updated_rule.service_name(), Some("NewService".to_string()));
+    assert_eq!(*updated_rule.protocol(), Some(ProtocolFirewallWindows::Tcp));
+    assert_eq!(*updated_rule.local_ports(), Some(to_hashset([443, 8443])));
+    assert_eq!(*updated_rule.remote_ports(), Some(to_hashset([80, 8080])));
     assert_eq!(
-        updated_rule.protocol(),
-        Some(ProtocolFirewallWindows::Tcp).as_ref()
-    );
-    assert_eq!(updated_rule.local_ports(), Some(&to_hashset([443, 8443])));
-    assert_eq!(updated_rule.remote_ports(), Some(&to_hashset([80, 8080])));
-    assert_eq!(
-        updated_rule.local_addresses(),
-        Some(&to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
+        *updated_rule.local_addresses(),
+        Some(to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
     );
     assert_eq!(
-        updated_rule.remote_addresses(),
-        Some(&to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
+        *updated_rule.remote_addresses(),
+        Some(to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
     );
-    assert_eq!(updated_rule.icmp_types_and_codes(), None);
-    assert_eq!(updated_rule.interface_types(), Some(&to_hashset([Lan])));
-    assert_eq!(updated_rule.grouping(), Some(&"Group B".to_string()));
+    assert_eq!(*updated_rule.icmp_types_and_codes(), None);
+    assert_eq!(*updated_rule.interface_types(), Some(to_hashset([Lan])));
+    assert_eq!(*updated_rule.grouping(), Some("Group B".to_string()));
     assert_eq!(
-        updated_rule.profiles(),
-        Some(ProfileFirewallWindows::Public).as_ref()
+        *updated_rule.profiles(),
+        Some(ProfileFirewallWindows::Public)
     );
-    assert_eq!(updated_rule.edge_traversal(), Some(true));
+    assert_eq!(*updated_rule.edge_traversal(), Some(true));
 
     remove_rule(RULE_NAME).expect("Failed to remove updated rule");
     assert!(!rule_exists(RULE_NAME).expect("Failed to check if rule was removed"));
@@ -910,36 +907,33 @@ fn test_add_or_update_with_all_parameters() {
     assert_eq!(updated_rule.direction(), &DirectionFirewallWindows::In);
     assert!(!updated_rule.enabled());
     assert_eq!(
-        updated_rule.description(),
-        Some(&"Block outbound TCP traffic".to_string())
+        *updated_rule.description(),
+        Some("Block outbound TCP traffic".to_string())
     );
     assert_eq!(
-        updated_rule.application_name(),
-        Some(&"C:\\Program Files\\NewApp\\new_app.exe".to_string())
+        *updated_rule.application_name(),
+        Some("C:\\Program Files\\NewApp\\new_app.exe".to_string())
     );
-    assert_eq!(updated_rule.service_name(), Some(&"NewService".to_string()));
+    assert_eq!(*updated_rule.service_name(), Some("NewService".to_string()));
+    assert_eq!(*updated_rule.protocol(), Some(ProtocolFirewallWindows::Tcp));
+    assert_eq!(*updated_rule.local_ports(), Some(to_hashset([443, 8443])));
+    assert_eq!(*updated_rule.remote_ports(), Some(to_hashset([80, 8080])));
     assert_eq!(
-        updated_rule.protocol(),
-        Some(ProtocolFirewallWindows::Tcp).as_ref()
-    );
-    assert_eq!(updated_rule.local_ports(), Some(&to_hashset([443, 8443])));
-    assert_eq!(updated_rule.remote_ports(), Some(&to_hashset([80, 8080])));
-    assert_eq!(
-        updated_rule.local_addresses(),
-        Some(&to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
+        *updated_rule.local_addresses(),
+        Some(to_hashset([IpAddr::from_str("172.16.0.1").unwrap()]))
     );
     assert_eq!(
-        updated_rule.remote_addresses(),
-        Some(&to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
+        *updated_rule.remote_addresses(),
+        Some(to_hashset([IpAddr::from_str("1.1.1.1").unwrap()]))
     );
-    assert_eq!(updated_rule.icmp_types_and_codes(), None);
-    assert_eq!(updated_rule.interface_types(), Some(&to_hashset([Lan])));
-    assert_eq!(updated_rule.grouping(), Some(&"Group B".to_string()));
+    assert_eq!(*updated_rule.icmp_types_and_codes(), None);
+    assert_eq!(*updated_rule.interface_types(), Some(to_hashset([Lan])));
+    assert_eq!(*updated_rule.grouping(), Some("Group B".to_string()));
     assert_eq!(
-        updated_rule.profiles(),
-        Some(ProfileFirewallWindows::Public).as_ref()
+        *updated_rule.profiles(),
+        Some(ProfileFirewallWindows::Public)
     );
-    assert_eq!(updated_rule.edge_traversal(), Some(true));
+    assert_eq!(*updated_rule.edge_traversal(), Some(true));
 
     remove_rule(RULE_NAME).expect("Failed to remove updated rule");
     assert!(!rule_exists(RULE_NAME).expect("Failed to check if rule was removed"));
@@ -999,7 +993,7 @@ fn test_all_protocol_transitions() {
             );
             assert!(rule_exists(&rule_name).unwrap(), "Rule not created (from)");
             let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
-            assert_eq!(updated_rule.protocol(), Some(proto_from));
+            assert_eq!(*updated_rule.protocol(), Some(proto_from).copied());
 
             let base_builder = WindowsFirewallRule::builder()
                 .name(&rule_name)
@@ -1034,7 +1028,7 @@ fn test_all_protocol_transitions() {
                 "Rule disappeared after update"
             );
             let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
-            assert_eq!(updated_rule.protocol(), Some(proto_to));
+            assert_eq!(*updated_rule.protocol(), Some(proto_to).copied());
 
             remove_rule(&rule_name).expect("Failed to remove test rule");
             assert!(!rule_exists(&rule_name).unwrap(), "Rule was not removed");
@@ -1070,8 +1064,8 @@ fn test_windows_firewall_rule_per_network_interface() {
         let result = get_rule(&rule_name).expect("Failed to retrieve the rule");
         assert_eq!(result.name(), &rule_name);
         assert_eq!(
-            result.interfaces(),
-            Some(&to_string_hashset([interface_name]))
+            *result.interfaces(),
+            Some(to_string_hashset([interface_name]))
         );
 
         remove_rule(&rule_name).expect("Failed to remove rule");
@@ -1114,8 +1108,8 @@ fn test_windows_firewall_rule_update_per_network_interface() {
 
         assert_eq!(updated_rule.name(), &rule_name);
         assert_eq!(
-            updated_rule.interfaces(),
-            Some(&to_string_hashset([interface_name]))
+            *updated_rule.interfaces(),
+            Some(to_string_hashset([interface_name]))
         );
 
         remove_rule(&rule_name).expect("Failed to remove rule");
