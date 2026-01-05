@@ -3,10 +3,10 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
 use typed_builder::TypedBuilder;
-use windows::core::BSTR;
 use windows::Win32::Foundation::VARIANT_BOOL;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
 use windows::Win32::System::Com::CoCreateInstance;
+use windows::core::BSTR;
 
 use crate::constants::DWCLSCONTEXT;
 use crate::errors::{SetRuleError, WindowsFirewallError};
@@ -18,8 +18,8 @@ use crate::utils::{
     bstr_to_hashset, hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp,
     to_string_hashset, variant_to_hashset, with_com_initialized,
 };
-use crate::windows_firewall::{add_or_update, remove_rule, rule_exists, update_rule};
-use crate::{add_rule, add_rule_if_not_exists, enable_rule, InterfaceTypes};
+use crate::windows_firewall::{add_rule_or_update, remove_rule, rule_exists, update_rule};
+use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, enable_rule};
 
 /// Represents a rule in the Windows Firewall.
 ///
@@ -224,7 +224,7 @@ impl WindowsFirewallRule {
     ///
     /// ⚠️ This function requires **administrative privileges**.
     pub fn add_or_update(&self) -> Result<bool, WindowsFirewallError> {
-        add_or_update(self)
+        add_rule_or_update(self)
     }
 
     /// Deletes an existing firewall rule from the system.
@@ -290,7 +290,7 @@ impl WindowsFirewallRule {
         update_rule(&self.name, settings)?;
 
         if let Some(name) = &settings.name {
-            self.name = name.to_string();
+            self.name = name.clone();
         }
         if let Some(direction) = &settings.direction {
             self.direction = *direction;
@@ -302,20 +302,20 @@ impl WindowsFirewallRule {
             self.action = *action;
         }
         if let Some(description) = &settings.description {
-            self.description = Some(description.to_string());
+            self.description = Some(description.clone());
         }
         if let Some(application_name) = &settings.application_name {
-            self.application_name = Some(application_name.to_string());
+            self.application_name = Some(application_name.clone());
         }
         if let Some(service_name) = &settings.service_name {
-            self.service_name = Some(service_name.to_string());
+            self.service_name = Some(service_name.clone());
         }
         if let Some(protocol) = &settings.protocol {
-            if is_not_tcp_or_udp(protocol) {
+            if is_not_tcp_or_udp(*protocol) {
                 self.local_ports = None;
                 self.remote_ports = None;
             }
-            if is_not_icmp(protocol) {
+            if is_not_icmp(*protocol) {
                 self.icmp_types_and_codes = None;
             }
             self.protocol = Some(*protocol);
@@ -333,7 +333,7 @@ impl WindowsFirewallRule {
             self.remote_addresses = Some(remote_addresses.clone());
         }
         if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-            self.icmp_types_and_codes = Some(icmp_types_and_codes.to_string());
+            self.icmp_types_and_codes = Some(icmp_types_and_codes.clone());
         }
         if let Some(interfaces) = &settings.interfaces {
             self.interfaces = Some(interfaces.clone());
@@ -342,7 +342,7 @@ impl WindowsFirewallRule {
             self.interface_types = Some(interface_types.clone());
         }
         if let Some(grouping) = &settings.grouping {
-            self.grouping = Some(grouping.to_string());
+            self.grouping = Some(grouping.clone());
         }
         if let Some(profiles) = &settings.profiles {
             self.profiles = Some(*profiles);

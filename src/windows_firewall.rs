@@ -2,14 +2,15 @@ use scopeguard::guard;
 use std::convert::TryFrom;
 use std::mem::ManuallyDrop;
 use tracing::error;
-use windows::core::{Interface, BSTR};
 use windows::Win32::NetworkManagement::WindowsFirewall::{
-    INetFwPolicy2, INetFwRule, INetFwRules, NetFwPolicy2, NET_FW_PROFILE_TYPE2,
+    INetFwPolicy2, INetFwRule, INetFwRules, NET_FW_PROFILE_TYPE2, NetFwPolicy2,
 };
 use windows::Win32::System::Com::CoCreateInstance;
 use windows::Win32::System::Ole::IEnumVARIANT;
 use windows::Win32::System::Variant::VARIANT;
+use windows::core::{BSTR, Interface};
 
+use crate::DirectionFirewallWindows;
 use crate::constants::DWCLSCONTEXT;
 use crate::errors::{SetRuleError, WindowsFirewallError};
 use crate::firewall_enums::ProfileFirewallWindows;
@@ -17,7 +18,6 @@ use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
 use crate::utils::{
     hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp, with_com_initialized,
 };
-use crate::DirectionFirewallWindows;
 
 /// Checks if a firewall rule with the given name exists.
 ///
@@ -201,7 +201,7 @@ pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, Window
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn add_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
+pub fn add_rule_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -265,88 +265,118 @@ pub fn update_rule(
     })
 }
 
-unsafe fn update_inetfw_rule(
+fn update_inetfw_rule(
     rule: &INetFwRule,
     settings: &WindowsFirewallRuleSettings,
 ) -> Result<(), WindowsFirewallError> {
     if let Some(name) = &settings.name {
-        rule.SetName(&BSTR::from(name))
-            .map_err(SetRuleError::Name)?;
+        unsafe { rule.SetName(&BSTR::from(name)).map_err(SetRuleError::Name) }?;
     }
     if let Some(direction) = settings.direction {
-        rule.SetDirection(direction.into())
-            .map_err(SetRuleError::Direction)?;
+        unsafe {
+            rule.SetDirection(direction.into())
+                .map_err(SetRuleError::Direction)
+        }?;
     }
     if let Some(enabled) = settings.enabled {
-        rule.SetEnabled(enabled.into())
-            .map_err(SetRuleError::Enabled)?;
+        unsafe {
+            rule.SetEnabled(enabled.into())
+                .map_err(SetRuleError::Enabled)
+        }?;
     }
     if let Some(action) = settings.action {
-        rule.SetAction(action.into())
-            .map_err(SetRuleError::Action)?;
+        unsafe { rule.SetAction(action.into()).map_err(SetRuleError::Action) }?;
     }
     if let Some(description) = &settings.description {
-        rule.SetDescription(&BSTR::from(description))
-            .map_err(SetRuleError::Description)?;
+        unsafe {
+            rule.SetDescription(&BSTR::from(description))
+                .map_err(SetRuleError::Description)
+        }?;
     }
     if let Some(application_name) = &settings.application_name {
-        rule.SetApplicationName(&BSTR::from(application_name))
-            .map_err(SetRuleError::ApplicationName)?;
+        unsafe {
+            rule.SetApplicationName(&BSTR::from(application_name))
+                .map_err(SetRuleError::ApplicationName)
+        }?;
     }
     if let Some(service_name) = &settings.service_name {
-        rule.SetServiceName(&BSTR::from(service_name))
-            .map_err(SetRuleError::ServiceName)?;
+        unsafe {
+            rule.SetServiceName(&BSTR::from(service_name))
+                .map_err(SetRuleError::ServiceName)
+        }?;
     }
     if let Some(protocol) = settings.protocol {
-        if is_not_tcp_or_udp(&protocol) {
-            let _ = rule.SetLocalPorts(&BSTR::from(""));
-            let _ = rule.SetRemotePorts(&BSTR::from(""));
+        if is_not_tcp_or_udp(protocol) {
+            let _ = unsafe { rule.SetLocalPorts(&BSTR::from("")) };
+            let _ = unsafe { rule.SetRemotePorts(&BSTR::from("")) };
         }
-        if is_not_icmp(&protocol) {
-            let _ = rule.SetIcmpTypesAndCodes(&BSTR::from(""));
+        if is_not_icmp(protocol) {
+            let _ = unsafe { rule.SetIcmpTypesAndCodes(&BSTR::from("")) };
         }
-        rule.SetProtocol(protocol.into())
-            .map_err(SetRuleError::Protocol)?;
+        unsafe {
+            rule.SetProtocol(protocol.into())
+                .map_err(SetRuleError::Protocol)
+        }?;
     }
     if let Some(local_ports) = &settings.local_ports {
-        rule.SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
-            .map_err(SetRuleError::LocalPorts)?;
+        unsafe {
+            rule.SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
+                .map_err(SetRuleError::LocalPorts)
+        }?;
     }
     if let Some(remote_ports) = &settings.remote_ports {
-        rule.SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
-            .map_err(SetRuleError::RemotePorts)?;
+        unsafe {
+            rule.SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
+                .map_err(SetRuleError::RemotePorts)
+        }?;
     }
     if let Some(local_addresses) = &settings.local_addresses {
-        rule.SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
-            .map_err(SetRuleError::LocalAddresses)?;
+        unsafe {
+            rule.SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
+                .map_err(SetRuleError::LocalAddresses)
+        }?;
     }
     if let Some(remote_addresses) = &settings.remote_addresses {
-        rule.SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
-            .map_err(SetRuleError::RemoteAddresses)?;
+        unsafe {
+            rule.SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
+                .map_err(SetRuleError::RemoteAddresses)
+        }?;
     }
     if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-        rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
-            .map_err(SetRuleError::IcmpTypesAndCodes)?;
+        unsafe {
+            rule.SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
+                .map_err(SetRuleError::IcmpTypesAndCodes)
+        }?;
     }
     if let Some(edge_traversal) = settings.edge_traversal {
-        rule.SetEdgeTraversal(edge_traversal.into())
-            .map_err(SetRuleError::EdgeTraversal)?;
+        unsafe {
+            rule.SetEdgeTraversal(edge_traversal.into())
+                .map_err(SetRuleError::EdgeTraversal)
+        }?;
     }
     if let Some(grouping) = &settings.grouping {
-        rule.SetGrouping(&BSTR::from(grouping))
-            .map_err(SetRuleError::Grouping)?;
+        unsafe {
+            rule.SetGrouping(&BSTR::from(grouping))
+                .map_err(SetRuleError::Grouping)
+        }?;
     }
     if let Some(interfaces) = &settings.interfaces {
-        rule.SetInterfaces(&hashset_to_variant(interfaces)?)
-            .map_err(SetRuleError::Interfaces)?;
+        unsafe {
+            rule.SetInterfaces(&hashset_to_variant(interfaces)?)
+                .map_err(SetRuleError::Interfaces)
+        }?;
     }
     if let Some(interface_types) = &settings.interface_types {
-        rule.SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
-            .map_err(SetRuleError::InterfaceTypes)?;
+        unsafe {
+            rule.SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
+                .map_err(SetRuleError::InterfaceTypes)
+        }?;
     }
     if let Some(profiles) = settings.profiles {
-        rule.SetProfiles(profiles.into())
-            .map_err(SetRuleError::Profiles)?;
+        unsafe {
+            rule.SetProfiles(profiles.into())
+                .map_err(SetRuleError::Profiles)
+        }?;
     }
 
     Ok(())
@@ -470,7 +500,7 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
             if fetched.is_err() {
                 error!("Error while fetching rules");
                 continue;
-            };
+            }
 
             if let Some(variant) = variants.first() {
                 let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.clone() };

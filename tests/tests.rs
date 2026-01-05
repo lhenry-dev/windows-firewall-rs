@@ -4,17 +4,17 @@ use std::collections::HashSet;
 use std::net::IpAddr;
 use std::str::FromStr;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
-use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
-use windows_firewall::{
-    add_rule, add_rule_if_not_exists, get_active_profile, get_firewall_state, get_rule,
-    list_incoming_rules, list_outgoing_rules, list_rules, remove_rule, rule_exists,
-    set_firewall_state, update_rule,
-};
+use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::{
     ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes::Lan, InterfaceTypes::Wireless,
     ProfileFirewallWindows, ProtocolFirewallWindows,
 };
 use windows_firewall::{WindowsFirewallRule, WindowsFirewallRuleSettings};
+use windows_firewall::{
+    add_rule, add_rule_if_not_exists, get_active_profile, get_firewall_state, get_rule,
+    list_incoming_rules, list_outgoing_rules, list_rules, remove_rule, rule_exists,
+    set_firewall_state, update_rule,
+};
 
 const RULE_NAME: &str = "aaaWindowsFirewallRsTestRule";
 
@@ -942,8 +942,8 @@ fn test_add_or_update_with_all_parameters() {
 #[test]
 fn test_all_protocol_transitions() {
     use windows_firewall::{
-        remove_rule, rule_exists, ActionFirewallWindows, DirectionFirewallWindows,
-        ProtocolFirewallWindows, WindowsFirewallRule,
+        ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows,
+        WindowsFirewallRule, remove_rule, rule_exists,
     };
 
     let protocols = [
