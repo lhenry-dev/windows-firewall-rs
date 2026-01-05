@@ -600,7 +600,6 @@ dependencies = [
  "tracing",
  "typed-builder",
  "windows",
- "windows-result",
 ]
 
 [[package]]

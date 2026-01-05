@@ -2,7 +2,7 @@
 name = "windows_firewall"
 authors = ["lhenry-dev <lhenry.dev1@gmail.com>"]
 version = "0.4.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "A crate for managing Windows Firewall rules and settings."
 license = "MIT/Apache-2.0"
@@ -36,7 +36,6 @@ windows = { version = "0.62.0", features = [
     "Win32_System_Ole",
     "Win32_System_Variant",
 ] }
-windows-result = "0.4.0"
 
 [dev-dependencies]
 ipconfig = "0.3.2"

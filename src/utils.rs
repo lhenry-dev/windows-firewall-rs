@@ -6,31 +6,31 @@ use std::{
     ptr::{addr_of, from_ref},
     str::FromStr,
 };
+use windows::core::HRESULT;
 use windows::{
-    core::{BSTR, PWSTR},
     Win32::{
         Foundation::GetLastError,
         System::{
             Com::{CoInitializeEx, CoUninitialize},
             Ole::{SafeArrayCreateVector, SafeArrayDestroy, SafeArrayPutElement},
             Variant::{
-                self, VariantInit, VariantToStringAlloc, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT,
+                self, VARIANT, VT_ARRAY, VT_BSTR, VT_VARIANT, VariantInit, VariantToStringAlloc,
             },
         },
     },
+    core::{BSTR, PWSTR},
 };
-use windows_result::HRESULT;
 
-use crate::{constants::DWCOINIT, ProtocolFirewallWindows, WindowsFirewallError};
+use crate::{ProtocolFirewallWindows, WindowsFirewallError, constants::DWCOINIT};
 
-pub fn is_not_icmp(protocol: &ProtocolFirewallWindows) -> bool {
+pub fn is_not_icmp(protocol: ProtocolFirewallWindows) -> bool {
     !matches!(
         protocol,
         ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6
     )
 }
 
-pub fn is_not_tcp_or_udp(protocol: &ProtocolFirewallWindows) -> bool {
+pub fn is_not_tcp_or_udp(protocol: ProtocolFirewallWindows) -> bool {
     !matches!(
         protocol,
         ProtocolFirewallWindows::Udp | ProtocolFirewallWindows::Tcp
@@ -45,7 +45,7 @@ where
     items.into_iter().map(Into::into).collect()
 }
 
-pub fn bstr_to_hashset<T>(bstr: Result<BSTR, windows_result::Error>) -> Option<HashSet<T>>
+pub fn bstr_to_hashset<T>(bstr: Result<BSTR, windows::core::Error>) -> Option<HashSet<T>>
 where
     T: FromStr + Eq + std::hash::Hash,
 {
@@ -61,10 +61,10 @@ where
                             return Some(parsed_t);
                         }
 
-                        if let Some((ip_str, _mask_str)) = trimmed.split_once('/') {
-                            if let Ok(parsed_t) = ip_str.parse::<T>() {
-                                return Some(parsed_t);
-                            }
+                        if let Some((ip_str, _mask_str)) = trimmed.split_once('/')
+                            && let Ok(parsed_t) = ip_str.parse::<T>()
+                        {
+                            return Some(parsed_t);
                         }
                     }
                     None
@@ -91,7 +91,7 @@ where
         .unwrap_or_default()
 }
 
-pub fn hashset_to_variant<T>(hashset: &HashSet<T>) -> windows_result::Result<VARIANT>
+pub fn hashset_to_variant<T>(hashset: &HashSet<T>) -> windows::core::Result<VARIANT>
 where
     T: ToString + AsRef<OsStr>,
 {
@@ -104,7 +104,7 @@ where
 
     if psa.is_null() {
         let error = unsafe { GetLastError() };
-        return Err(windows_result::Error::from_hresult(HRESULT::from_win32(
+        return Err(windows::core::Error::from_hresult(HRESULT::from_win32(
             error.0,
         )));
     }
@@ -176,7 +176,7 @@ where
 mod tests {
     use std::collections::HashSet;
     use windows::core::BSTR;
-    use windows_result::Error;
+    use windows::core::Error;
 
     use crate::utils::{bstr_to_hashset, hashset_to_bstr, hashset_to_variant, variant_to_hashset};
 
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_convert_bstr_to_hashset_error_input() {
-        let bstr_value: Result<BSTR, Error> = Err(windows_result::Error::empty());
+        let bstr_value: Result<BSTR, Error> = Err(windows::core::Error::empty());
 
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
