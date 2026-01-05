@@ -590,7 +590,7 @@ checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
 
 [[package]]
 name = "windows_firewall"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "getset",
  "ipconfig",
