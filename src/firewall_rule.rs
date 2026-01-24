@@ -1,7 +1,6 @@
 use getset::{Getters, Setters};
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::net::IpAddr;
 use typed_builder::TypedBuilder;
 use windows::Win32::Foundation::VARIANT_BOOL;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
@@ -19,7 +18,7 @@ use crate::utils::{
     to_string_hashset, variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{add_rule_or_update, remove_rule, rule_exists, update_rule};
-use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, enable_rule};
+use crate::{InterfaceTypes, NetAddress, add_rule, add_rule_if_not_exists, enable_rule};
 
 /// Represents a rule in the Windows Firewall.
 ///
@@ -103,14 +102,20 @@ pub struct WindowsFirewallRule {
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
     remote_ports: Option<HashSet<u16>>,
-    /// A set of local IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    /// A set of local IP addresses or CIDR subnets this rule applies to. IPv4 and IPv6 are supported.
+    #[builder(
+        default,
+        setter(transform = |items: impl IntoIterator<Item = impl Into<NetAddress>>| Some(items.into_iter().map(Into::into).collect()))
+    )]
     #[getset(get = "pub", set = "pub")]
-    local_addresses: Option<HashSet<IpAddr>>,
-    /// A set of remote IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    local_addresses: Option<HashSet<NetAddress>>,
+    /// A set of remote IP addresses or CIDR subnets this rule applies to. IPv4 and IPv6 are supported.
+    #[builder(
+        default,
+        setter(transform = |items: impl IntoIterator<Item = impl Into<NetAddress>>| Some(items.into_iter().map(Into::into).collect()))
+    )]
     #[getset(get = "pub", set = "pub")]
-    remote_addresses: Option<HashSet<IpAddr>>,
+    remote_addresses: Option<HashSet<NetAddress>>,
     /// A list of ICMP types and codes this rule applies to, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
@@ -607,12 +612,18 @@ pub struct WindowsFirewallRuleSettings {
     /// A set of remote ports associated with the firewall rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) remote_ports: Option<HashSet<u16>>,
-    /// A set of local addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
-    pub(crate) local_addresses: Option<HashSet<IpAddr>>,
-    /// A set of remote addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
-    pub(crate) remote_addresses: Option<HashSet<IpAddr>>,
+    /// A set of local addresses or CIDR subnets associated with the firewall rule.
+    #[builder(
+        default,
+        setter(transform = |items: impl IntoIterator<Item = impl Into<NetAddress>>| Some(items.into_iter().map(Into::into).collect()))
+    )]
+    pub(crate) local_addresses: Option<HashSet<NetAddress>>,
+    /// A set of remote addresses or CIDR subnets associated with the firewall rule.
+    #[builder(
+        default,
+        setter(transform = |items: impl IntoIterator<Item = impl Into<NetAddress>>| Some(items.into_iter().map(Into::into).collect()))
+    )]
+    pub(crate) remote_addresses: Option<HashSet<NetAddress>>,
     /// The ICMP types and codes associated with the rule, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) icmp_types_and_codes: Option<String>,
@@ -662,7 +673,7 @@ impl From<WindowsFirewallRule> for WindowsFirewallRuleSettings {
 mod tests {
     use super::*;
     use std::collections::HashSet;
-    use std::net::IpAddr;
+    use ipnet::IpNet;
     use std::str::FromStr;
 
     #[test]
@@ -730,7 +741,7 @@ mod tests {
 
         // set_local_addresses
         let mut addrs = HashSet::new();
-        addrs.insert(IpAddr::from_str("127.0.0.1").unwrap());
+        addrs.insert(NetAddress::from(IpNet::from_str("127.0.0.0/24").unwrap()));
         rule.set_local_addresses(Some(addrs.clone()));
         assert_eq!(*rule.local_addresses(), Some(addrs));
         rule.set_local_addresses(None);
@@ -738,7 +749,8 @@ mod tests {
 
         // set_remote_addresses
         let mut raddrs = HashSet::new();
-        raddrs.insert(IpAddr::from_str("8.8.8.8").unwrap());
+        raddrs.insert(NetAddress::from(IpNet::from_str("8.8.8.0/24").unwrap()));
+        raddrs.insert(NetAddress::from(std::net::IpAddr::from_str("2001:4860:4860::8888").unwrap()));
         rule.set_remote_addresses(Some(raddrs.clone()));
         assert_eq!(*rule.remote_addresses(), Some(raddrs));
         rule.set_remote_addresses(None);

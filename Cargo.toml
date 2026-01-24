@@ -28,6 +28,7 @@ scopeguard = "1.2.0"
 thiserror = "2.0.16"
 tracing = "0.1.41"
 typed-builder = "0.23.0"
+ipnet = "2.9.0"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.0", features = [

@@ -10,6 +10,7 @@ mod firewall_enums;
 mod firewall_rule;
 mod utils;
 mod windows_firewall;
+mod net_address;
 
 pub use errors::WindowsFirewallError;
 pub use firewall_enums::{
@@ -17,6 +18,7 @@ pub use firewall_enums::{
     ProtocolFirewallWindows,
 };
 pub use firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
+pub use net_address::NetAddress;
 pub use windows_firewall::{
     add_rule, add_rule_if_not_exists, add_rule_or_update, enable_rule, get_active_profile,
     get_firewall_state, get_rule, list_incoming_rules, list_outgoing_rules, list_rules,
