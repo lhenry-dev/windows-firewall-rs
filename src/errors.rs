@@ -6,7 +6,7 @@ pub enum WindowsFirewallError {
     /// Error returned when `CoInitializeEx` fails during COM initialization.
     #[error("CoInitializeEx failed: {0}")]
     CoInitializeExFailed(String),
-    /// A general Windows API error wrapped from the `windows::core` crate.
+    /// A general Windows API error wrapped from the `windows_result` crate.
     #[error(transparent)]
     WindowsError(#[from] windows::core::Error),
     /// Error returned when setting a firewall rule property fails.
