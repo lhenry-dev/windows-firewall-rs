@@ -273,6 +273,14 @@ fn update_inetfw_rule(
         unsafe { rule.SetName(&BSTR::from(name)).map_err(SetRuleError::Name) }?;
     }
     if let Some(direction) = settings.direction {
+        if direction != DirectionFirewallWindows::In && (unsafe { rule.EdgeTraversal() }?.as_bool())
+        {
+            unsafe {
+                rule.SetEdgeTraversal(false.into())
+                    .map_err(SetRuleError::EdgeTraversal)
+            }?;
+        }
+
         unsafe {
             rule.SetDirection(direction.into())
                 .map_err(SetRuleError::Direction)

@@ -73,6 +73,13 @@ pub fn assert_firewall_rule_eq(actual: &WindowsFirewallRule, expected: &WindowsF
             "ICMP types and codes mismatch"
         );
     }
+    if let Some(interface) = expected.interfaces() {
+        assert_eq!(
+            actual.interfaces(),
+            &Some(interface.clone()),
+            "Interfaces mismatch"
+        );
+    }
     if let Some(interface_types) = expected.interface_types() {
         assert_eq!(
             actual.interface_types(),

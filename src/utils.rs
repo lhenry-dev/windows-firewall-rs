@@ -176,24 +176,23 @@ where
 mod tests {
     use std::collections::HashSet;
     use windows::core::BSTR;
-    use windows::core::Error;
 
     use crate::utils::{bstr_to_hashset, hashset_to_bstr, hashset_to_variant, variant_to_hashset};
 
     // BSTR tests
     #[test]
     fn test_convert_bstr_to_hashset_valid_input() {
-        let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("1, 2, 3, 4"));
+        let bstr_value = Ok(BSTR::from("1, 2, 3, 4"));
 
-        let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
+        let result = bstr_to_hashset(bstr_value);
 
-        let expected: HashSet<i32> = vec![1, 2, 3, 4].into_iter().collect();
+        let expected = vec![1, 2, 3, 4].into_iter().collect();
         assert_eq!(result, Some(expected));
     }
 
     #[test]
     fn test_convert_bstr_to_hashset_with_empty_strings() {
-        let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("  ,  ,  "));
+        let bstr_value = Ok(BSTR::from("  ,  ,  "));
 
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
@@ -202,17 +201,17 @@ mod tests {
 
     #[test]
     fn test_convert_bstr_to_hashset_with_invalid_input() {
-        let bstr_value: Result<BSTR, Error> = Ok(BSTR::from("1, abc, 3"));
+        let bstr_value = Ok(BSTR::from("1, abc, 3"));
 
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
-        let expected: HashSet<i32> = vec![1, 3].into_iter().collect();
+        let expected = vec![1, 3].into_iter().collect();
         assert_eq!(result, Some(expected));
     }
 
     #[test]
     fn test_convert_bstr_to_hashset_empty_input() {
-        let bstr_value: Result<BSTR, Error> = Ok(BSTR::from(""));
+        let bstr_value = Ok(BSTR::from(""));
 
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
@@ -221,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_convert_bstr_to_hashset_error_input() {
-        let bstr_value: Result<BSTR, Error> = Err(windows::core::Error::empty());
+        let bstr_value = Err(windows::core::Error::empty());
 
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
 
@@ -230,19 +229,19 @@ mod tests {
 
     #[test]
     fn test_convert_hashset_to_bstr_valid_input() {
-        let hashset_data: HashSet<i32> = vec![1, 2, 3, 4].into_iter().collect();
-        let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
+        let hashset_data = vec![1, 2, 3, 4].into_iter().collect();
+        let hashset = Some(&hashset_data);
 
-        let result: BSTR = hashset_to_bstr(hashset);
+        let result = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("1,2,3,4");
 
         let result_str = result.to_string();
-        let mut result_vec: Vec<&str> = result_str.split(',').collect();
+        let mut result_vec: Vec<_> = result_str.split(',').collect();
         result_vec.sort_unstable();
 
         let expected_str = expected.to_string();
-        let mut expected_vec: Vec<&str> = expected_str.split(',').collect();
+        let mut expected_vec: Vec<_> = expected_str.split(',').collect();
         expected_vec.sort_unstable();
 
         assert_eq!(result_vec, expected_vec);
@@ -251,9 +250,9 @@ mod tests {
     #[test]
     fn test_convert_hashset_to_bstr_empty_input() {
         let hashset_data: HashSet<i32> = HashSet::new();
-        let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
+        let hashset = Some(&hashset_data);
 
-        let result: BSTR = hashset_to_bstr(hashset);
+        let result = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("");
         assert_eq!(result, expected);
@@ -263,7 +262,7 @@ mod tests {
     fn test_convert_hashset_to_bstr_none_input() {
         let hashset: Option<&HashSet<i32>> = None;
 
-        let result: BSTR = hashset_to_bstr(hashset);
+        let result = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("");
         assert_eq!(result, expected);
@@ -272,9 +271,9 @@ mod tests {
     #[test]
     fn test_convert_hashset_to_bstr_single_element() {
         let hashset_data: HashSet<i32> = vec![42].into_iter().collect();
-        let hashset: Option<&HashSet<i32>> = Some(&hashset_data);
+        let hashset = Some(&hashset_data);
 
-        let result: BSTR = hashset_to_bstr(hashset);
+        let result = hashset_to_bstr(hashset);
 
         let expected = BSTR::from("42");
         assert_eq!(result, expected);

@@ -5,8 +5,8 @@ use scopeguard::guard;
 use serial_test::serial;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
-use windows_firewall::ProtocolFirewallWindows;
 use windows_firewall::WindowsFirewallRuleSettings;
+use windows_firewall::{DirectionFirewallWindows, ProtocolFirewallWindows};
 use windows_firewall::{get_rule, list_incoming_rules, list_outgoing_rules, list_rules};
 
 use helpers::build::{
@@ -88,7 +88,7 @@ fn test_add_rule_if_not_exists() {
 #[test]
 #[serial]
 fn test_add_or_update() {
-    let rule = build_icmp_full_rule(RULE_NAME);
+    let rule = build_tcp_full_rule(RULE_NAME);
 
     let auto_remove_rule_result = AutoRemoveFirewallRule::add_or_update(&rule)
         .expect("Failed to add or update full parameter firewall rule");
@@ -97,7 +97,7 @@ fn test_add_or_update() {
         "Rule should be added"
     );
 
-    let updated_settings = build_tcp_full_rule(RULE_NAME);
+    let updated_settings = build_icmp_full_rule(RULE_NAME);
     let auto_remove_rule_result = AutoRemoveFirewallRule::add_or_update(&updated_settings)
         .expect("Failed to add or update full parameter firewall rule");
     assert!(
@@ -208,5 +208,42 @@ fn test_update_rule_per_network_interface() {
 
         rule.set_interfaces(Some(HashSet::from([interface_name.to_string()])));
         assert_firewall_rule_eq(&updated_rule, &rule);
+    }
+}
+
+#[test]
+#[serial]
+fn test_direction_and_edge_traversal_transitions() {
+    let states = [
+        (DirectionFirewallWindows::In, true, "In_EdgeTrue"),
+        (DirectionFirewallWindows::Out, false, "Out_EdgeFalse"),
+    ];
+
+    for (dir_from, edge_from, label_from) in &states {
+        for (dir_to, edge_to, label_to) in &states {
+            let rule_name = format!("{RULE_NAME}_transition_{label_from}_to_{label_to}");
+
+            let mut rule = build_tcp_full_rule(&rule_name);
+            rule.set_direction(*dir_from);
+            rule.set_edge_traversal(Some(*edge_from));
+
+            let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
+
+            let fetched = get_rule(&rule_name).unwrap();
+            assert_firewall_rule_eq(&fetched, &rule);
+
+            let new_settings = WindowsFirewallRuleSettings::builder()
+                .direction(*dir_to)
+                .edge_traversal(*edge_to)
+                .build();
+
+            rule.update(&new_settings).expect("Failed to update rule");
+
+            let fetched_updated = get_rule(&rule_name).unwrap();
+
+            rule.set_direction(*dir_to);
+            rule.set_edge_traversal(Some(*edge_to));
+            assert_firewall_rule_eq(&fetched_updated, &rule);
+        }
     }
 }
