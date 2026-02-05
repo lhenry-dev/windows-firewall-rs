@@ -1,1 +1,1 @@
-pub const RULE_NAME: &str = "aaaWindowsFirewallRsTestRule";
+pub const RULE_NAME: &str = "aaaWindowsFirewallTestRule";

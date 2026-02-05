@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use ipconfig::get_adapters;
 use scopeguard::guard;
-use serial_test::serial;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::WindowsFirewallRuleSettings;
@@ -22,22 +21,24 @@ use crate::helpers::utils::assert_firewall_rule_eq;
 mod helpers;
 
 #[test]
-#[serial]
 fn test_list_rules() {
-    let rule = build_tcp_full_rule(RULE_NAME);
+    let rule_name = format!("{RULE_NAME}_list_rules");
+    let rule = build_tcp_full_rule(&rule_name);
     let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
 
-    let rules = list_rules();
-    assert!(rules.is_ok(), "Failed to list outgoing rules");
+    let rules = list_rules().expect("Failed to list outgoing rules");
 
-    let rules = rules.unwrap();
+    let fetched = rules
+        .iter()
+        .find(|r| *r.name() == rule_name)
+        .unwrap_or_else(|| {
+            panic!(
+                "Firewall rule '{}' not found in list_rules() output",
+                rule_name
+            )
+        });
 
-    let found = rules.iter().any(|r| r.name() == RULE_NAME);
-    assert!(
-        found,
-        "Firewall rule '{}' not found in list_rules() output",
-        RULE_NAME
-    );
+    assert_firewall_rule_eq(fetched, &rule);
 }
 
 #[test]
@@ -53,7 +54,6 @@ fn test_list_outgoing_rules() {
 }
 
 #[test]
-#[serial]
 fn test_firewall_rules_conversion() {
     let firewall_rules = list_rules().expect("Failed to retrieve firewall rules");
 
@@ -75,9 +75,9 @@ fn test_firewall_rules_conversion() {
 }
 
 #[test]
-#[serial]
 fn test_add_rule_if_not_exists() {
-    let rule = build_tcp_full_rule(RULE_NAME);
+    let rule_name = format!("{RULE_NAME}_add_if_not_exists");
+    let rule = build_tcp_full_rule(&rule_name);
 
     let auto_remove_rule_result = AutoRemoveFirewallRule::add_if_not_exists(&rule).unwrap();
     assert!(auto_remove_rule_result.added_or_changed);
@@ -86,9 +86,9 @@ fn test_add_rule_if_not_exists() {
 }
 
 #[test]
-#[serial]
 fn test_add_or_update() {
-    let rule = build_tcp_full_rule(RULE_NAME);
+    let rule_name = format!("{RULE_NAME}_add_or_update");
+    let rule = build_tcp_full_rule(&rule_name);
 
     let auto_remove_rule_result = AutoRemoveFirewallRule::add_or_update(&rule)
         .expect("Failed to add or update full parameter firewall rule");
@@ -97,7 +97,7 @@ fn test_add_or_update() {
         "Rule should be added"
     );
 
-    let updated_settings = build_icmp_full_rule(RULE_NAME);
+    let updated_settings = build_icmp_full_rule(&rule_name);
     let auto_remove_rule_result = AutoRemoveFirewallRule::add_or_update(&updated_settings)
         .expect("Failed to add or update full parameter firewall rule");
     assert!(
@@ -105,14 +105,14 @@ fn test_add_or_update() {
         "Rule should be updated"
     );
 
-    let updated_rule = get_rule(RULE_NAME).expect("Failed to get updated firewall rule");
+    let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
     assert_firewall_rule_eq(&updated_rule, &updated_settings);
 }
 
 #[test]
-#[serial]
 fn test_enable_rule() {
-    let mut rule = build_tcp_full_rule(RULE_NAME);
+    let rule_name = format!("{RULE_NAME}_enable_rule");
+    let mut rule = build_tcp_full_rule(&rule_name);
 
     let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
 
@@ -148,31 +148,28 @@ fn test_all_protocol_transitions() {
             let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
 
             let fetched = get_rule(&rule_name).unwrap();
-            assert_eq!(*fetched.protocol(), Some(proto_from).copied());
+            assert_firewall_rule_eq(&fetched, &rule);
 
             let new_settings = WindowsFirewallRuleSettings::from(build_full_rule_for_protocol(
                 &rule_name, *proto_to,
             ));
 
             rule.update(&new_settings).expect("Failed to update rule");
-            assert!(
-                rule.exists().unwrap(),
-                "Rule should exist after being updated"
-            );
+
             let fetched_updated = get_rule(&rule_name).unwrap();
-            assert_eq!(*fetched_updated.protocol(), Some(proto_to).copied());
+
+            assert_firewall_rule_eq(&fetched_updated, &rule);
         }
     }
 }
 
 #[test]
-#[serial]
 fn test_add_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
     for adapter in adapters {
         let interface_name = adapter.friendly_name();
-        let rule_name = format!("{RULE_NAME}_{interface_name}");
+        let rule_name = format!("{RULE_NAME}_add_{interface_name}");
 
         let rule = build_rule_for_interface(&rule_name, interface_name);
         let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
@@ -184,13 +181,12 @@ fn test_add_rule_per_network_interface() {
 }
 
 #[test]
-#[serial]
 fn test_update_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
     for adapter in adapters {
         let interface_name = adapter.friendly_name();
-        let rule_name = format!("{RULE_NAME}_{interface_name}");
+        let rule_name = format!("{RULE_NAME}_update_{interface_name}");
 
         let mut rule = build_base_rule(&rule_name);
         let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
@@ -212,7 +208,6 @@ fn test_update_rule_per_network_interface() {
 }
 
 #[test]
-#[serial]
 fn test_direction_and_edge_traversal_transitions() {
     let states = [
         (DirectionFirewallWindows::In, true, "In_EdgeTrue"),

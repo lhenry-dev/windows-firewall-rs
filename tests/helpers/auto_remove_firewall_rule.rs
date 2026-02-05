@@ -1,4 +1,4 @@
-use windows_firewall::{WindowsFirewallError, WindowsFirewallRule, rule_exists};
+use windows_firewall::{WindowsFirewallError, WindowsFirewallRule};
 
 #[must_use]
 pub struct AutoRemoveRuleResult {
@@ -8,10 +8,7 @@ pub struct AutoRemoveRuleResult {
 
 impl AutoRemoveFirewallRule {
     fn make_result(rule: &WindowsFirewallRule, should_remove: bool) -> AutoRemoveRuleResult {
-        assert!(
-            rule_exists(rule.name()).unwrap(),
-            "Rule should exist after operation"
-        );
+        assert!(rule.exists().unwrap(), "Rule should exist after operation");
 
         AutoRemoveRuleResult {
             _guard: AutoRemoveFirewallRule {
