@@ -39,4 +39,3 @@ windows = { version = "0.62.0", features = [
 
 [dev-dependencies]
 ipconfig = "0.3.2"
-serial_test = "3.2.0"
