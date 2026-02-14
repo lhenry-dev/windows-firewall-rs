@@ -12,24 +12,35 @@ pub enum WindowsFirewallError {
     /// Error returned when setting a firewall rule property fails.
     #[error(transparent)]
     SetRuleError(#[from] SetRuleError),
+    /// Error returned when a firewall rule value is invalid.
+    #[error(transparent)]
+    RuleValueError(#[from] InvalidRuleValue),
     /// Indicates that the specified firewall rule already exists.
     #[error("The firewall rule already exists")]
     RuleAlreadyExists,
-    /// Indicates that an invalid value was used for `NET_FW_ACTION`.
-    #[error("Invalid NET_FW_ACTION value")]
-    InvalidNetFwAction,
-    /// Indicates that an invalid value was used for `NET_FW_PROFILE`.
-    #[error("Invalid NET_FW_PROFILE value")]
-    InvalidNetFwProfile,
-    /// Indicates that an invalid value was used for `NET_FW_RULE_DIRECTION`.
-    #[error("Invalid NET_FW_RULE_DIRECTION value")]
-    InvalidNetFwRuleDirection,
-    /// Indicates that an invalid value was used for `NET_FW_IP_PROTOCOL`.
-    #[error("Invalid NET_FW_IP_PROTOCOL value")]
-    InvalidNetFwIpProtocol,
     /// Indicates that a required `HashSet` is either empty or None.
     #[error("Empty or None HashSet")]
     EmptyHashSet,
+}
+
+/// Errors related to setting firewall rule properties, with specific variants for each property.
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum InvalidRuleValue {
+    /// Indicates that an invalid value was used for `NET_FW_ACTION`.
+    #[error("Invalid NET_FW_ACTION value")]
+    NetFwAction,
+    /// Indicates that an invalid value was used for `NET_FW_PROFILE`.
+    #[error("Invalid NET_FW_PROFILE value")]
+    NetFwProfile,
+    /// Indicates that an invalid value was used for `NET_FW_RULE_DIRECTION`.
+    #[error("Invalid NET_FW_RULE_DIRECTION value")]
+    NetFwRuleDirection,
+    /// Indicates that an invalid value was used for `NET_FW_IP_PROTOCOL`.
+    #[error("Invalid NET_FW_IP_PROTOCOL value")]
+    NetFwIpProtocol,
+    /// Indicates that an invalid value was used for `InterfaceTypes`.
+    #[error("Invalid InterfaceTypes value")]
+    InterfaceTypes,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]

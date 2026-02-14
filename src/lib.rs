@@ -16,9 +16,13 @@ pub use firewall_enums::{
     ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes, ProfileFirewallWindows,
     ProtocolFirewallWindows,
 };
+pub use firewall_rule::firewall_address::{
+    FwAddress, FwAddressKeyword, FwAddressParseError, FwAddressRange,
+};
+pub use firewall_rule::firewall_port::{FwPort, FwPortKeyword, FwPortParseError, FwPortRange};
 pub use firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
 pub use windows_firewall::{
-    add_rule, add_rule_if_not_exists, add_rule_or_update, enable_rule, get_active_profile,
-    get_firewall_state, get_rule, list_incoming_rules, list_outgoing_rules, list_rules,
-    remove_rule, rule_exists, set_firewall_state, update_rule,
+    add_rule, add_rule_if_not_exists, add_rule_or_update, count_rules, enable_rule,
+    get_active_profile, get_firewall_state, get_rule, list_incoming_rules, list_outgoing_rules,
+    list_rules, remove_rule, rule_exists, set_firewall_state, update_rule,
 };

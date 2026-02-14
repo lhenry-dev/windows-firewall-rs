@@ -1,7 +1,7 @@
 use scopeguard::guard;
 use std::convert::TryFrom;
 use std::mem::ManuallyDrop;
-use tracing::error;
+use tracing::warn;
 use windows::Win32::NetworkManagement::WindowsFirewall::{
     INetFwPolicy2, INetFwRule, INetFwRules, NET_FW_PROFILE_TYPE2, NetFwPolicy2,
 };
@@ -467,6 +467,36 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
     })
 }
 
+/// Retrieves the total number of firewall rules.
+///
+/// This function initializes COM, creates a firewall policy object, and fetches
+/// the total count of firewall rules.
+///
+/// # Returns
+///
+/// Returns a [`Result<i32, WindowsFirewallError>`](WindowsFirewallError) with the
+/// number of firewall rules if successful. In case of an error (e.g., COM initialization failure),
+/// it returns a [`WindowsFirewallError`].
+///
+/// # Errors
+///
+/// This function may return a [`WindowsFirewallError`] if there is a failure during:
+/// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
+/// - Fetching the firewall rules count.
+///
+/// # Security
+///
+/// This function does not require administrative privileges.
+pub fn count_rules() -> Result<i32, WindowsFirewallError> {
+    with_com_initialized(|| {
+        let fw_policy: INetFwPolicy2 =
+            unsafe { CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT) }?;
+        let fw_rules: INetFwRules = unsafe { fw_policy.Rules() }?;
+        let rules_count = unsafe { fw_rules.Count()? };
+        Ok(rules_count)
+    })
+}
+
 /// Retrieves all the firewall rules as a list of [`WindowsFirewallRule`] objects.
 ///
 /// This function initializes COM, creates a firewall policy object, and enumerates through
@@ -506,21 +536,38 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
             let fetched = unsafe { enumerator.Next(&mut variants, &mut pceltfetch) };
 
             if fetched.is_err() {
-                error!("Error while fetching rules");
+                warn!("Error while fetching rules");
                 continue;
             }
 
-            if let Some(variant) = variants.first() {
-                let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.clone() };
+            let Some(variant) = variants.first() else {
+                warn!("No more rules to fetch, but expected at least one");
+                continue;
+            };
 
-                let _dispatch_cleanup = guard(dispatch.clone(), |mut d| {
-                    unsafe { ManuallyDrop::drop(&mut d) };
-                });
+            let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.clone() };
 
-                if let Some(dispatch) = dispatch.as_ref() {
+            let _dispatch_cleanup = guard(dispatch.clone(), |mut d| {
+                unsafe { ManuallyDrop::drop(&mut d) };
+            });
+
+            let Some(dispatch) = dispatch.as_ref() else {
+                warn!("Variant does not contain a dispatch pointer");
+                continue;
+            };
+
+            let fw_rule = dispatch.cast::<INetFwRule>()?;
+
+            match fw_rule.try_into() {
+                Ok(rule) => rules_list.push(rule),
+                Err(e) => {
                     let fw_rule = dispatch.cast::<INetFwRule>()?;
 
-                    rules_list.push(fw_rule.try_into()?);
+                    warn!(
+                        "Failed to convert {:?} rule into WindowsFirewallRule struct: {:?}",
+                        unsafe { fw_rule.Name().unwrap_or_else(|_| BSTR::from("<unknown>")) },
+                        e
+                    );
                 }
             }
         }

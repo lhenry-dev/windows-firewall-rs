@@ -1,11 +1,16 @@
 use std::collections::HashSet;
+use std::net::{IpAddr, Ipv4Addr};
 
 use ipconfig::get_adapters;
+use ipnet::IpNet;
 use scopeguard::guard;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
-use windows_firewall::WindowsFirewallRuleSettings;
-use windows_firewall::{DirectionFirewallWindows, ProtocolFirewallWindows};
+use windows_firewall::{
+    DirectionFirewallWindows, FwAddress, FwAddressKeyword, FwAddressRange, FwPortKeyword,
+    FwPortRange, ProtocolFirewallWindows, count_rules,
+};
+use windows_firewall::{FwPort, WindowsFirewallRuleSettings};
 use windows_firewall::{get_rule, list_incoming_rules, list_outgoing_rules, list_rules};
 
 use helpers::build::{
@@ -15,18 +20,27 @@ use helpers::build::{
 use helpers::constants::RULE_NAME;
 
 use crate::helpers::auto_remove_firewall_rule::AutoRemoveFirewallRule;
-use crate::helpers::build::build_base_rule;
+use crate::helpers::build::{build_base_rule, build_rule_for_address, build_rule_for_port};
 use crate::helpers::utils::assert_firewall_rule_eq;
+use serial_test::{parallel, serial};
 
 mod helpers;
 
 #[test]
+#[serial]
 fn test_list_rules() {
     let rule_name = format!("{RULE_NAME}_list_rules");
     let rule = build_tcp_full_rule(&rule_name);
     let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
 
+    let count = count_rules().expect("Failed to count rules");
     let rules = list_rules().expect("Failed to list outgoing rules");
+
+    assert_eq!(
+        count as usize,
+        rules.len(),
+        "Count of rules should match the length of the rules list"
+    );
 
     let fetched = rules
         .iter()
@@ -75,6 +89,7 @@ fn test_firewall_rules_conversion() {
 }
 
 #[test]
+#[parallel]
 fn test_add_rule_if_not_exists() {
     let rule_name = format!("{RULE_NAME}_add_if_not_exists");
     let rule = build_tcp_full_rule(&rule_name);
@@ -86,6 +101,7 @@ fn test_add_rule_if_not_exists() {
 }
 
 #[test]
+#[parallel]
 fn test_add_or_update() {
     let rule_name = format!("{RULE_NAME}_add_or_update");
     let rule = build_tcp_full_rule(&rule_name);
@@ -110,6 +126,7 @@ fn test_add_or_update() {
 }
 
 #[test]
+#[parallel]
 fn test_enable_rule() {
     let rule_name = format!("{RULE_NAME}_enable_rule");
     let mut rule = build_tcp_full_rule(&rule_name);
@@ -124,6 +141,7 @@ fn test_enable_rule() {
 }
 
 #[test]
+#[parallel]
 fn test_all_protocol_transitions() {
     let protocols = [
         (ProtocolFirewallWindows::Tcp, "Tcp"),
@@ -145,7 +163,11 @@ fn test_all_protocol_transitions() {
             let rule_name = format!("{RULE_NAME}_transition_{label_from}_to_{label_to}");
 
             let mut rule = build_full_rule_for_protocol(&rule_name, *proto_from);
-            let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
+            let _guard = AutoRemoveFirewallRule::add(&rule);
+
+            if let Err(e) = &_guard {
+                panic!("Failed to add rule with protocol {:?}: {}", proto_from, e);
+            }
 
             let fetched = get_rule(&rule_name).unwrap();
             assert_firewall_rule_eq(&fetched, &rule);
@@ -154,7 +176,11 @@ fn test_all_protocol_transitions() {
                 &rule_name, *proto_to,
             ));
 
-            rule.update(&new_settings).expect("Failed to update rule");
+            let rule_update = rule.update(&new_settings);
+
+            if let Err(e) = &rule_update {
+                panic!("Failed to update rule to protocol {:?}: {}", proto_to, e);
+            }
 
             let fetched_updated = get_rule(&rule_name).unwrap();
 
@@ -164,6 +190,7 @@ fn test_all_protocol_transitions() {
 }
 
 #[test]
+#[parallel]
 fn test_add_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
@@ -172,7 +199,14 @@ fn test_add_rule_per_network_interface() {
         let rule_name = format!("{RULE_NAME}_add_{interface_name}");
 
         let rule = build_rule_for_interface(&rule_name, interface_name);
-        let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
+        let _guard = AutoRemoveFirewallRule::add(&rule);
+
+        if let Err(e) = &_guard {
+            panic!(
+                "Failed to add rule for interface '{}': {}",
+                interface_name, e
+            );
+        }
 
         let fetched_rule = get_rule(&rule_name).expect("Failed to retrieve the rule");
 
@@ -181,6 +215,7 @@ fn test_add_rule_per_network_interface() {
 }
 
 #[test]
+#[parallel]
 fn test_update_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
@@ -189,7 +224,14 @@ fn test_update_rule_per_network_interface() {
         let rule_name = format!("{RULE_NAME}_update_{interface_name}");
 
         let mut rule = build_base_rule(&rule_name);
-        let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
+        let _guard = AutoRemoveFirewallRule::add(&rule);
+
+        if let Err(e) = &_guard {
+            panic!(
+                "Failed to add rule for interface '{}': {}",
+                interface_name, e
+            );
+        }
 
         let updated_settings = WindowsFirewallRuleSettings::builder()
             .interfaces([interface_name])
@@ -197,8 +239,14 @@ fn test_update_rule_per_network_interface() {
 
         println!("Updating rule for interface: {interface_name}");
 
-        rule.update(&updated_settings.clone())
-            .expect("Failed to update rule");
+        let update_result = rule.update(&updated_settings.clone());
+
+        if let Err(e) = &update_result {
+            panic!(
+                "Failed to update rule for interface '{}': {}",
+                interface_name, e
+            );
+        }
 
         let updated_rule = get_rule(&rule_name).expect("Failed to get updated firewall rule");
 
@@ -208,6 +256,7 @@ fn test_update_rule_per_network_interface() {
 }
 
 #[test]
+#[parallel]
 fn test_direction_and_edge_traversal_transitions() {
     let states = [
         (DirectionFirewallWindows::In, true, "In_EdgeTrue"),
@@ -222,7 +271,14 @@ fn test_direction_and_edge_traversal_transitions() {
             rule.set_direction(*dir_from);
             rule.set_edge_traversal(Some(*edge_from));
 
-            let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
+            let _guard = AutoRemoveFirewallRule::add(&rule);
+
+            if let Err(e) = &_guard {
+                panic!(
+                    "Failed to add rule with direction {:?} and edge traversal {:?}: {}",
+                    dir_from, edge_from, e
+                );
+            }
 
             let fetched = get_rule(&rule_name).unwrap();
             assert_firewall_rule_eq(&fetched, &rule);
@@ -232,7 +288,14 @@ fn test_direction_and_edge_traversal_transitions() {
                 .edge_traversal(*edge_to)
                 .build();
 
-            rule.update(&new_settings).expect("Failed to update rule");
+            let update_result = rule.update(&new_settings);
+
+            if let Err(e) = &update_result {
+                panic!(
+                    "Failed to update rule to direction {:?} and edge traversal {:?}: {}",
+                    dir_to, edge_to, e
+                );
+            }
 
             let fetched_updated = get_rule(&rule_name).unwrap();
 
@@ -240,5 +303,74 @@ fn test_direction_and_edge_traversal_transitions() {
             rule.set_edge_traversal(Some(*edge_to));
             assert_firewall_rule_eq(&fetched_updated, &rule);
         }
+    }
+}
+
+#[test]
+#[parallel]
+fn test_add_rules_for_all_fwport_variants() {
+    let fwports = [
+        FwPort::Any,
+        FwPort::Keyword(FwPortKeyword::Rpc),
+        FwPort::Keyword(FwPortKeyword::RpcEpmap),
+        // FwPort::Keyword(FwPortKeyword::IpHttps),
+        // FwPort::Keyword(FwPortKeyword::Ply2Disc),
+        FwPort::Keyword(FwPortKeyword::Teredo),
+        FwPort::Port(80),
+        FwPort::Port(443),
+        FwPort::Range(FwPortRange {
+            start: 1000,
+            end: 2000,
+        }),
+    ];
+
+    for (i, port) in fwports.iter().enumerate() {
+        let rule_name = format!("TEST_FWPORT_RULE_{}", i);
+
+        let rule = build_rule_for_port(&rule_name, port);
+        let _guard = AutoRemoveFirewallRule::add(&rule);
+
+        if let Err(e) = &_guard {
+            panic!("Failed to add rule for port {:?}: {}", port, e);
+        }
+
+        let fetched = get_rule(&rule_name).expect("Failed to fetch the rule");
+        assert_firewall_rule_eq(&fetched, &rule);
+    }
+}
+
+#[test]
+#[parallel]
+fn test_add_rules_for_all_fwaddress_variants() {
+    let fwaddresses = [
+        FwAddress::Any,
+        FwAddress::Keyword(FwAddressKeyword::DefaultGateway),
+        FwAddress::Keyword(FwAddressKeyword::Dhcp),
+        FwAddress::Keyword(FwAddressKeyword::Dns),
+        FwAddress::Keyword(FwAddressKeyword::Wins),
+        FwAddress::Keyword(FwAddressKeyword::LocalSubnet),
+        FwAddress::Ip(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+        FwAddress::Cidr(IpNet::new(IpAddr::V4(Ipv4Addr::new(192, 168, 0, 0)), 24).unwrap()),
+        FwAddress::Range(
+            FwAddressRange::new(
+                IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(192, 168, 0, 255)),
+            )
+            .unwrap(),
+        ),
+    ];
+
+    for (i, address) in fwaddresses.iter().enumerate() {
+        let rule_name = format!("TEST_FWADDRESS_RULE_{}", i);
+
+        let rule = build_rule_for_address(&rule_name, address);
+        let _guard = AutoRemoveFirewallRule::add(&rule);
+
+        if let Err(e) = &_guard {
+            panic!("Failed to add rule for address {:?}: {}", address, e);
+        }
+
+        let fetched = get_rule(&rule_name).expect("Failed to fetch the rule");
+        assert_firewall_rule_eq(&fetched, &rule);
     }
 }

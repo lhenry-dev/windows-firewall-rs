@@ -21,7 +21,7 @@ impl AutoRemoveFirewallRule {
 }
 
 pub struct AutoRemoveFirewallRule {
-    rule: WindowsFirewallRule,
+    pub rule: WindowsFirewallRule,
     should_remove: bool,
 }
 
