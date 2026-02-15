@@ -10,11 +10,11 @@ use windows::Win32::System::Ole::IEnumVARIANT;
 use windows::Win32::System::Variant::VARIANT;
 use windows::core::{BSTR, Interface};
 
-use crate::DirectionFirewallWindows;
+use crate::Direction;
 use crate::constants::DWCLSCONTEXT;
 use crate::errors::{SetRuleError, WindowsFirewallError};
-use crate::firewall_enums::ProfileFirewallWindows;
-use crate::firewall_rule::{WindowsFirewallRule, WindowsFirewallRuleSettings};
+use crate::firewall_enums::Profile;
+use crate::firewall_rule::{FirewallRule, FirewallRuleUpdate};
 use crate::utils::{
     hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp, with_com_initialized,
 };
@@ -57,7 +57,7 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 /// Retrieves the firewall rule with the specified name.
 ///
 /// This function initializes COM, creates a firewall policy object, and attempts to retrieve
-/// the firewall rule with the given name. If successful, it returns the rule as a [`WindowsFirewallRule`].
+/// the firewall rule with the given name. If successful, it returns the rule as a [`FirewallRule`].
 ///
 /// # Arguments
 ///
@@ -65,7 +65,7 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<WindowsFirewallRule, WindowsFirewallError>`](WindowsFirewallRule). If the rule is found and
+/// This function returns a [`Result<FirewallRule, WindowsFirewallError>`](FirewallRule). If the rule is found and
 /// successfully converted, it returns `Ok(rule)`. In case of any error (e.g., COM initialization failure,
 /// rule not found, or failure during conversion), it returns a [`WindowsFirewallError`].
 ///
@@ -74,12 +74,12 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 /// This function may return a [`WindowsFirewallError`] if there is a failure during:
 /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
 /// - Fetching the firewall rule (e.g., rule not found).
-/// - Converting the rule into the [`WindowsFirewallRule`] struct.
+/// - Converting the rule into the [`FirewallRule`] struct.
 ///
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError> {
+pub fn get_rule(name: &str) -> Result<FirewallRule, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
@@ -87,7 +87,7 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
 
         let rule_name = BSTR::from(name);
         let rule = fw_rules.Item(&rule_name);
-        WindowsFirewallRule::try_from(rule?)
+        FirewallRule::try_from(rule?)
     })
 }
 
@@ -99,7 +99,7 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
 ///
 /// # Arguments
 ///
-/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add.
+/// * `rule` - A [`FirewallRule`] struct representing the firewall rule to add.
 ///
 /// # Returns
 ///
@@ -116,7 +116,7 @@ pub fn get_rule(name: &str) -> Result<WindowsFirewallRule, WindowsFirewallError>
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> {
+pub fn add_rule(rule: &FirewallRule) -> Result<(), WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -135,7 +135,7 @@ pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> 
 ///
 /// # Arguments
 ///
-/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add.
+/// * `rule` - A [`FirewallRule`] struct representing the firewall rule to add.
 ///
 /// # Returns
 ///
@@ -153,7 +153,7 @@ pub fn add_rule(rule: &WindowsFirewallRule) -> Result<(), WindowsFirewallError> 
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
+pub fn add_rule_if_not_exists(rule: &FirewallRule) -> Result<bool, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
@@ -182,7 +182,7 @@ pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, Window
 ///
 /// # Arguments
 ///
-/// * `rule` - A [`WindowsFirewallRule`] struct representing the firewall rule to add or update.
+/// * `rule` - A [`FirewallRule`] struct representing the firewall rule to add or update.
 ///
 /// # Returns
 ///
@@ -201,7 +201,7 @@ pub fn add_rule_if_not_exists(rule: &WindowsFirewallRule) -> Result<bool, Window
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn add_rule_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFirewallError> {
+pub fn add_rule_or_update(rule: &FirewallRule) -> Result<bool, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         let fw_rules: INetFwRules = fw_policy.Rules()?;
@@ -225,13 +225,13 @@ pub fn add_rule_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFir
 /// Updates an existing firewall rule with new settings.
 ///
 /// This function initializes COM, creates a firewall policy object, and updates the specified rule
-/// with new settings provided in the [`WindowsFirewallRuleSettings`]. The function updates various
+/// with new settings provided in the [`FirewallRuleUpdate`]. The function updates various
 /// properties of the rule, such as direction, action, name, and more.
 ///
 /// # Arguments
 ///
 /// * `rule_name` - A string slice representing the name of the firewall rule to update.
-/// * `settings` - A [`WindowsFirewallRuleSettings`] struct containing the updated settings for the rule.
+/// * `settings` - A [`FirewallRuleUpdate`] struct containing the updated settings for the rule.
 ///
 /// # Returns
 ///
@@ -250,7 +250,7 @@ pub fn add_rule_or_update(rule: &WindowsFirewallRule) -> Result<bool, WindowsFir
 /// ⚠️ This function requires **administrative privileges**.
 pub fn update_rule(
     rule_name: &str,
-    settings: &WindowsFirewallRuleSettings,
+    settings: &FirewallRuleUpdate,
 ) -> Result<(), WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
@@ -267,14 +267,13 @@ pub fn update_rule(
 
 fn update_inetfw_rule(
     rule: &INetFwRule,
-    settings: &WindowsFirewallRuleSettings,
+    settings: &FirewallRuleUpdate,
 ) -> Result<(), WindowsFirewallError> {
     if let Some(name) = &settings.name {
         unsafe { rule.SetName(&BSTR::from(name)).map_err(SetRuleError::Name) }?;
     }
     if let Some(direction) = settings.direction {
-        if direction != DirectionFirewallWindows::In && (unsafe { rule.EdgeTraversal() }?.as_bool())
-        {
+        if direction != Direction::In && (unsafe { rule.EdgeTraversal() }?.as_bool()) {
             unsafe {
                 rule.SetEdgeTraversal(false.into())
                     .map_err(SetRuleError::EdgeTraversal)
@@ -377,7 +376,7 @@ fn update_inetfw_rule(
     if let Some(interface_types) = &settings.interface_types {
         unsafe {
             rule.SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
-                .map_err(SetRuleError::InterfaceTypes)
+                .map_err(SetRuleError::InterfaceType)
         }?;
     }
     if let Some(profiles) = settings.profiles {
@@ -497,15 +496,15 @@ pub fn count_rules() -> Result<i32, WindowsFirewallError> {
     })
 }
 
-/// Retrieves all the firewall rules as a list of [`WindowsFirewallRule`] objects.
+/// Retrieves all the firewall rules as a list of [`FirewallRule`] objects.
 ///
 /// This function initializes COM, creates a firewall policy object, and enumerates through
-/// all the firewall rules, converting them into [`WindowsFirewallRule`] structs and returning
+/// all the firewall rules, converting them into [`FirewallRule`] structs and returning
 /// them as a vector.
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`](WindowsFirewallRule). If the rules
+/// This function returns a [`Result<Vec<FirewallRule>, WindowsFirewallError>`](FirewallRule). If the rules
 /// are successfully retrieved, it returns `Ok(rules_list)`. In case of an error (e.g., COM initialization failure),
 /// it returns a [`WindowsFirewallError`].
 ///
@@ -518,7 +517,7 @@ pub fn count_rules() -> Result<i32, WindowsFirewallError> {
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
+pub fn list_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
     let mut rules_list = Vec::new();
 
     with_com_initialized(|| {
@@ -564,7 +563,7 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
                     let fw_rule = dispatch.cast::<INetFwRule>()?;
 
                     warn!(
-                        "Failed to convert {:?} rule into WindowsFirewallRule struct: {:?}",
+                        "Failed to convert {:?} rule into FirewallRule struct: {:?}",
                         unsafe { fw_rule.Name().unwrap_or_else(|_| BSTR::from("<unknown>")) },
                         e
                     );
@@ -576,14 +575,14 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
     })
 }
 
-/// Retrieves all incoming firewall rules as a list of [`WindowsFirewallRule`] objects.
+/// Retrieves all incoming firewall rules as a list of [`FirewallRule`] objects.
 ///
 /// This function filters the firewall rules to include only incoming rules.
 /// It leverages [`list_rules()`] to get all rules and then applies a filter.
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`](WindowsFirewallRule).
+/// This function returns a [`Result<Vec<FirewallRule>, WindowsFirewallError>`](FirewallRule).
 /// If successful, it returns `Ok(incoming_rules)`, otherwise an error is returned.
 ///
 /// # Errors
@@ -593,24 +592,24 @@ pub fn list_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn list_incoming_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
+pub fn list_incoming_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
     let all_rules = list_rules()?;
-    let incoming_rules: Vec<WindowsFirewallRule> = all_rules
+    let incoming_rules: Vec<FirewallRule> = all_rules
         .into_iter()
-        .filter(|rule| *rule.direction() == DirectionFirewallWindows::In)
+        .filter(|rule| *rule.direction() == Direction::In)
         .collect();
 
     Ok(incoming_rules)
 }
 
-/// Retrieves all outgoing firewall rules as a list of [`WindowsFirewallRule`] objects.
+/// Retrieves all outgoing firewall rules as a list of [`FirewallRule`] objects.
 ///
 /// This function filters the firewall rules to include only outgoing rules.
 /// It leverages [`list_rules()`] to get all rules and then applies a filter.
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<Vec<WindowsFirewallRule>, WindowsFirewallError>`] .
+/// This function returns a [`Result<Vec<FirewallRule>, WindowsFirewallError>`] .
 /// If successful, it returns `Ok(outgoing_rules)`, otherwise an error is returned.
 ///
 /// # Errors
@@ -620,11 +619,11 @@ pub fn list_incoming_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn list_outgoing_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewallError> {
+pub fn list_outgoing_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
     let all_rules = list_rules()?;
-    let outgoing_rules: Vec<WindowsFirewallRule> = all_rules
+    let outgoing_rules: Vec<FirewallRule> = all_rules
         .into_iter()
-        .filter(|rule| *rule.direction() == DirectionFirewallWindows::Out)
+        .filter(|rule| *rule.direction() == Direction::Out)
         .collect();
 
     Ok(outgoing_rules)
@@ -633,12 +632,12 @@ pub fn list_outgoing_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
 /// Retrieves the active firewall profile.
 ///
 /// This function initializes COM, creates a firewall policy object, and retrieves the current
-/// active firewall profile, returning it as a [`ProfileFirewallWindows`] object.
+/// active firewall profile, returning it as a [`Profile`] object.
 ///
 /// # Returns
 ///
-/// This function returns a [`Result<ProfileFirewallWindows, WindowsFirewallError>`](ProfileFirewallWindows). If the active profile
-/// is successfully retrieved, it returns [`Ok(profile)`](ProfileFirewallWindows). In case of an error (e.g., COM initialization failure),
+/// This function returns a [`Result<Profile, WindowsFirewallError>`](Profile). If the active profile
+/// is successfully retrieved, it returns [`Ok(profile)`](Profile). In case of an error (e.g., COM initialization failure),
 /// it returns a [`WindowsFirewallError`].
 ///
 /// # Errors
@@ -650,11 +649,11 @@ pub fn list_outgoing_rules() -> Result<Vec<WindowsFirewallRule>, WindowsFirewall
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallError> {
+pub fn get_active_profile() -> Result<Profile, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
-        let active_profile = ProfileFirewallWindows::try_from(fw_policy.CurrentProfileTypes()?)?;
+        let active_profile = Profile::try_from(fw_policy.CurrentProfileTypes()?)?;
 
         Ok(active_profile)
     })
@@ -668,7 +667,7 @@ pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallErr
 ///
 /// # Arguments
 ///
-/// * `profile` - A [`ProfileFirewallWindows`] enum value representing the firewall profile
+/// * `profile` - A [`Profile`] enum value representing the firewall profile
 ///   (such as public, private, or domain) for which the state should be retrieved.
 ///
 /// # Returns
@@ -686,7 +685,7 @@ pub fn get_active_profile() -> Result<ProfileFirewallWindows, WindowsFirewallErr
 /// # Security
 ///
 /// This function does not require administrative privileges.
-pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, WindowsFirewallError> {
+pub fn get_firewall_state(profile: Profile) -> Result<bool, WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
 
@@ -705,7 +704,7 @@ pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, Windo
 ///
 /// # Arguments
 ///
-/// * `profile` - A [`ProfileFirewallWindows`] enum value representing the firewall profile
+/// * `profile` - A [`Profile`] enum value representing the firewall profile
 ///   (such as public, private, or domain) for which the state should be set.
 /// * `state` - A boolean value indicating the desired firewall state. `true` enables the firewall,
 ///   while `false` disables it.
@@ -725,10 +724,7 @@ pub fn get_firewall_state(profile: ProfileFirewallWindows) -> Result<bool, Windo
 /// # Security
 ///
 /// ⚠️ This function requires **administrative privileges**.
-pub fn set_firewall_state(
-    profile: ProfileFirewallWindows,
-    state: bool,
-) -> Result<(), WindowsFirewallError> {
+pub fn set_firewall_state(profile: Profile, state: bool) -> Result<(), WindowsFirewallError> {
     with_com_initialized(|| unsafe {
         let fw_policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, DWCLSCONTEXT)?;
         fw_policy.put_FirewallEnabled(NET_FW_PROFILE_TYPE2(profile.into()), state.into())?;

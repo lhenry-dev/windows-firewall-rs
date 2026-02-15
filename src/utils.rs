@@ -24,23 +24,17 @@ use windows::{
     core::{BSTR, PWSTR},
 };
 
-use crate::{ProtocolFirewallWindows, WindowsFirewallError, constants::DWCOINIT};
+use crate::{Protocol, WindowsFirewallError, constants::DWCOINIT};
 
 const BSTR_SEPARATOR: &str = ",";
 const VARIANT_SEPARATOR: &str = "; ";
 
-pub fn is_not_icmp(protocol: ProtocolFirewallWindows) -> bool {
-    !matches!(
-        protocol,
-        ProtocolFirewallWindows::Icmpv4 | ProtocolFirewallWindows::Icmpv6
-    )
+pub fn is_not_icmp(protocol: Protocol) -> bool {
+    !matches!(protocol, Protocol::Icmpv4 | Protocol::Icmpv6)
 }
 
-pub fn is_not_tcp_or_udp(protocol: ProtocolFirewallWindows) -> bool {
-    !matches!(
-        protocol,
-        ProtocolFirewallWindows::Udp | ProtocolFirewallWindows::Tcp
-    )
+pub fn is_not_tcp_or_udp(protocol: Protocol) -> bool {
+    !matches!(protocol, Protocol::Udp | Protocol::Tcp)
 }
 
 pub fn into_hashset<T, U>(items: impl IntoIterator<Item = T>) -> HashSet<U>

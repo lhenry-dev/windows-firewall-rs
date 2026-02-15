@@ -5,7 +5,7 @@ use thiserror::Error;
 
 /// Errors that can occur when parsing firewall port tokens
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum FwPortParseError {
+pub enum PortParseError {
     /// Invalid token (not a port number, range, keyword, or "*")
     #[error("invalid firewall port token: {0}")]
     Token(String),
@@ -28,7 +28,7 @@ pub enum FwPortParseError {
 /// Enum representing firewall port keywords and values
 /// Theses token can be uses uniquely in `local_ports` properties of firewall rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum FwPortKeyword {
+pub enum PortKeyword {
     /// "RPC" - the port(s) used by the RPC service, which can vary dynamically and are determined at runtime. The firewall will automatically allow the necessary ports for RPC communication when this keyword is used.
     Rpc,
     /// "RPC-EPMap" - the port used by the RPC Endpoint Mapper service, which is typically TCP port 135. This service is responsible for mapping RPC services to their dynamically assigned ports.
@@ -41,7 +41,7 @@ pub enum FwPortKeyword {
     Teredo,
 }
 
-impl fmt::Display for FwPortKeyword {
+impl fmt::Display for PortKeyword {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::Rpc => "RPC",
@@ -54,8 +54,8 @@ impl fmt::Display for FwPortKeyword {
     }
 }
 
-impl FromStr for FwPortKeyword {
-    type Err = FwPortParseError;
+impl FromStr for PortKeyword {
+    type Err = PortParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.eq_ignore_ascii_case("rpc") {
@@ -70,32 +70,32 @@ impl FromStr for FwPortKeyword {
             return Ok(Self::Teredo);
         }
 
-        Err(FwPortParseError::Token(s.into()))
+        Err(PortParseError::Token(s.into()))
     }
 }
 
 /// Struct representing a port range for firewall rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FwPortRange {
+pub struct PortRange {
     /// Starting port number of the range
     pub start: u16,
     /// Ending port number of the range
     pub end: u16,
 }
 
-impl fmt::Display for FwPortRange {
+impl fmt::Display for PortRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}-{}", self.start, self.end)
     }
 }
 
-impl FwPortRange {
-    /// Creates a new `FwPortRange` ensuring that the start port is not greater than the end port.
+impl PortRange {
+    /// Creates a new `PortRange` ensuring that the start port is not greater than the end port.
     /// # Errors
-    /// Returns `FwPortParseError::RangeOrder` if the start port is greater than the end port.
-    pub fn new(start: u16, end: u16) -> Result<Self, FwPortParseError> {
+    /// Returns `PortParseError::RangeOrder` if the start port is greater than the end port.
+    pub fn new(start: u16, end: u16) -> Result<Self, PortParseError> {
         if start > end {
-            return Err(FwPortParseError::RangeOrder { start, end });
+            return Err(PortParseError::RangeOrder { start, end });
         }
 
         Ok(Self { start, end })
@@ -104,18 +104,18 @@ impl FwPortRange {
 
 /// Firewall port token
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum FwPort {
+pub enum Port {
     /// "*" — any port
     Any,
     /// Keywords
-    Keyword(FwPortKeyword),
+    Keyword(PortKeyword),
     /// Single port
     Port(u16),
     /// Port range
-    Range(FwPortRange),
+    Range(PortRange),
 }
 
-impl fmt::Display for FwPort {
+impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Any => write!(f, "*"),
@@ -126,32 +126,32 @@ impl fmt::Display for FwPort {
     }
 }
 
-impl From<u16> for FwPort {
+impl From<u16> for Port {
     fn from(value: u16) -> Self {
         Self::Port(value)
     }
 }
 
-impl From<FwPortKeyword> for FwPort {
-    fn from(value: FwPortKeyword) -> Self {
+impl From<PortKeyword> for Port {
+    fn from(value: PortKeyword) -> Self {
         Self::Keyword(value)
     }
 }
 
-impl From<FwPortRange> for FwPort {
-    fn from(range: FwPortRange) -> Self {
+impl From<PortRange> for Port {
+    fn from(range: PortRange) -> Self {
         Self::Range(range)
     }
 }
 
-impl FromStr for FwPort {
-    type Err = FwPortParseError;
+impl FromStr for Port {
+    type Err = PortParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
 
         if s.is_empty() {
-            return Err(FwPortParseError::Token(s.into()));
+            return Err(PortParseError::Token(s.into()));
         }
 
         // Any port
@@ -160,7 +160,7 @@ impl FromStr for FwPort {
         }
 
         // Keywords
-        if let Ok(keyword) = FwPortKeyword::from_str(s) {
+        if let Ok(keyword) = PortKeyword::from_str(s) {
             return Ok(Self::Keyword(keyword));
         }
 
@@ -168,13 +168,13 @@ impl FromStr for FwPort {
         if let Some((start, end)) = s.split_once('-') {
             let start = start
                 .parse()
-                .map_err(|_| FwPortParseError::RangeStart(start.into()))?;
+                .map_err(|_| PortParseError::RangeStart(start.into()))?;
 
             let end = end
                 .parse()
-                .map_err(|_| FwPortParseError::RangeEnd(end.into()))?;
+                .map_err(|_| PortParseError::RangeEnd(end.into()))?;
 
-            let range = FwPortRange::new(start, end)?;
+            let range = PortRange::new(start, end)?;
 
             return Ok(Self::Range(range));
         }
@@ -184,7 +184,7 @@ impl FromStr for FwPort {
             return Ok(Self::Port(port));
         }
 
-        Err(FwPortParseError::Token(s.into()))
+        Err(PortParseError::Token(s.into()))
     }
 }
 
@@ -195,8 +195,8 @@ mod tests {
 
     #[test]
     fn parse_any_port() {
-        let parsed = FwPort::from_str("*").unwrap();
-        assert_eq!(parsed, FwPort::Any);
+        let parsed = Port::from_str("*").unwrap();
+        assert_eq!(parsed, Port::Any);
     }
 
     /* ---------- From ---------- */
@@ -204,20 +204,20 @@ mod tests {
     #[test]
     fn parse_from_u16() {
         let port = 80;
-        assert_eq!(FwPort::from(port), FwPort::Port(port));
+        assert_eq!(Port::from(port), Port::Port(port));
     }
 
     #[test]
     fn parse_from_fw_port_range() {
-        let range = FwPortRange::new(1000, 2000).unwrap();
-        assert_eq!(FwPort::from(range), FwPort::Range(range));
+        let range = PortRange::new(1000, 2000).unwrap();
+        assert_eq!(Port::from(range), Port::Range(range));
     }
 
     #[test]
     fn parse_from_fw_port_keyword() {
         assert_eq!(
-            FwPort::from(FwPortKeyword::Teredo),
-            FwPort::Keyword(FwPortKeyword::Teredo)
+            Port::from(PortKeyword::Teredo),
+            Port::Keyword(PortKeyword::Teredo)
         );
     }
 
@@ -225,23 +225,23 @@ mod tests {
 
     #[test]
     fn parse_keywords_case_insensitive() {
-        assert_eq!(FwPort::from_str("*").unwrap(), FwPort::Any);
+        assert_eq!(Port::from_str("*").unwrap(), Port::Any);
         assert_eq!(
-            FwPort::from_str("RPC").unwrap(),
-            FwPort::Keyword(FwPortKeyword::Rpc)
+            Port::from_str("RPC").unwrap(),
+            Port::Keyword(PortKeyword::Rpc)
         );
         assert_eq!(
-            FwPort::from_str("rpc").unwrap(),
-            FwPort::Keyword(FwPortKeyword::Rpc)
+            Port::from_str("rpc").unwrap(),
+            Port::Keyword(PortKeyword::Rpc)
         );
     }
 
     #[test]
     fn parse_keywords_with_whitespace() {
-        assert_eq!(FwPort::from_str(" * ").unwrap(), FwPort::Any);
+        assert_eq!(Port::from_str(" * ").unwrap(), Port::Any);
         assert_eq!(
-            FwPort::from_str(" rpc ").unwrap(),
-            FwPort::Keyword(FwPortKeyword::Rpc)
+            Port::from_str(" rpc ").unwrap(),
+            Port::Keyword(PortKeyword::Rpc)
         );
     }
 
@@ -249,72 +249,72 @@ mod tests {
 
     #[test]
     fn parse_single_port() {
-        let parsed = FwPort::from_str("80").unwrap();
-        assert_eq!(parsed, FwPort::Port(80));
+        let parsed = Port::from_str("80").unwrap();
+        assert_eq!(parsed, Port::Port(80));
 
-        let parsed = FwPort::from_str("0").unwrap();
-        assert_eq!(parsed, FwPort::Port(0));
+        let parsed = Port::from_str("0").unwrap();
+        assert_eq!(parsed, Port::Port(0));
 
-        let parsed = FwPort::from_str("65535").unwrap();
-        assert_eq!(parsed, FwPort::Port(65535));
+        let parsed = Port::from_str("65535").unwrap();
+        assert_eq!(parsed, Port::Port(65535));
     }
 
     /* ---------- Port range ---------- */
 
     #[test]
     fn parse_port_range() {
-        let parsed = FwPort::from_str("1000-2000").unwrap();
-        assert_eq!(parsed, FwPort::Range(FwPortRange::new(1000, 2000).unwrap()));
+        let parsed = Port::from_str("1000-2000").unwrap();
+        assert_eq!(parsed, Port::Range(PortRange::new(1000, 2000).unwrap()));
 
-        let parsed = FwPort::from_str("0-65535").unwrap();
-        assert_eq!(parsed, FwPort::Range(FwPortRange::new(0, 65535).unwrap()));
+        let parsed = Port::from_str("0-65535").unwrap();
+        assert_eq!(parsed, Port::Range(PortRange::new(0, 65535).unwrap()));
     }
 
     #[test]
     fn reject_invalid_range_start() {
-        let err = FwPort::from_str("abc-100").unwrap_err();
+        let err = Port::from_str("abc-100").unwrap_err();
 
-        assert!(matches!(err, FwPortParseError::RangeStart(_)));
+        assert!(matches!(err, PortParseError::RangeStart(_)));
     }
 
     #[test]
     fn reject_invalid_range_end() {
-        let err = FwPort::from_str("100-xyz").unwrap_err();
+        let err = Port::from_str("100-xyz").unwrap_err();
 
-        assert!(matches!(err, FwPortParseError::RangeEnd(_)));
+        assert!(matches!(err, PortParseError::RangeEnd(_)));
     }
 
     #[test]
     fn reject_range_start_greater_than_end() {
-        let err = FwPort::from_str("2000-1000").unwrap_err();
+        let err = Port::from_str("2000-1000").unwrap_err();
 
-        assert!(matches!(err, FwPortParseError::RangeOrder { .. }));
+        assert!(matches!(err, PortParseError::RangeOrder { .. }));
     }
 
     /* ---------- Display roundtrip ---------- */
 
     #[test]
     fn display_roundtrip_keyword() {
-        let parsed = FwPort::from_str("*").unwrap();
+        let parsed = Port::from_str("*").unwrap();
         assert_eq!(parsed.to_string(), "*");
 
-        let parsed = FwPort::from_str("RPC").unwrap();
+        let parsed = Port::from_str("RPC").unwrap();
         assert_eq!(parsed.to_string(), "RPC");
     }
 
     #[test]
     fn display_roundtrip_port() {
-        let port = FwPort::Port(8080);
+        let port = Port::Port(8080);
         let s = port.to_string();
-        let parsed = FwPort::from_str(&s).unwrap();
+        let parsed = Port::from_str(&s).unwrap();
         assert_eq!(port, parsed);
     }
 
     #[test]
     fn display_roundtrip_range() {
-        let range = FwPort::Range(FwPortRange::new(1000, 2000).unwrap());
+        let range = Port::Range(PortRange::new(1000, 2000).unwrap());
         let s = range.to_string();
-        let parsed = FwPort::from_str(&s).unwrap();
+        let parsed = Port::from_str(&s).unwrap();
         assert_eq!(range, parsed);
     }
 
@@ -322,21 +322,21 @@ mod tests {
 
     #[test]
     fn reject_invalid_port_number() {
-        assert!(FwPort::from_str("70000").is_err());
-        assert!(FwPort::from_str("-1").is_err());
-        assert!(FwPort::from_str("abc").is_err());
+        assert!(Port::from_str("70000").is_err());
+        assert!(Port::from_str("-1").is_err());
+        assert!(Port::from_str("abc").is_err());
     }
 
     #[test]
     fn reject_garbage() {
-        assert!(FwPort::from_str("not a port").is_err());
-        assert!(FwPort::from_str("123-abc").is_err());
-        assert!(FwPort::from_str("abc-123").is_err());
+        assert!(Port::from_str("not a port").is_err());
+        assert!(Port::from_str("123-abc").is_err());
+        assert!(Port::from_str("abc-123").is_err());
     }
 
     #[test]
     fn parse_empty_string() {
-        let err = FwPort::from_str("").unwrap_err();
-        assert!(matches!(err, FwPortParseError::Token(_)));
+        let err = Port::from_str("").unwrap_err();
+        assert!(matches!(err, PortParseError::Token(_)));
     }
 }

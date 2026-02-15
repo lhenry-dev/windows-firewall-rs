@@ -1,4 +1,4 @@
-use windows_firewall::ProfileFirewallWindows::{Domain, Private, Public};
+use windows_firewall::Profile::{Domain, Private, Public};
 use windows_firewall::{get_active_profile, get_firewall_state, set_firewall_state};
 
 #[test]

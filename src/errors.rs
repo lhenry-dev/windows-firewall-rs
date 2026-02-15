@@ -32,9 +32,9 @@ pub enum InvalidRuleValue {
     /// Indicates that an invalid value was used for `NET_FW_IP_PROTOCOL`.
     #[error("Invalid NET_FW_IP_PROTOCOL value")]
     NetFwIpProtocol,
-    /// Indicates that an invalid value was used for `InterfaceTypes`.
-    #[error("Invalid InterfaceTypes value")]
-    InterfaceTypes,
+    /// Indicates that an invalid value was used for `InterfaceType`.
+    #[error("Invalid InterfaceType value")]
+    InterfaceType,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -72,7 +72,7 @@ pub enum SetRuleError {
     #[error("Failed to set interfaces: {0}")]
     Interfaces(#[source] windows::core::Error),
     #[error("Failed to set interface types: {0}")]
-    InterfaceTypes(#[source] windows::core::Error),
+    InterfaceType(#[source] windows::core::Error),
     #[error("Failed to set profiles: {0}")]
     Profiles(#[source] windows::core::Error),
 }
