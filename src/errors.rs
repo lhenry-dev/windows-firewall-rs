@@ -15,12 +15,6 @@ pub enum WindowsFirewallError {
     /// Error returned when a firewall rule value is invalid.
     #[error(transparent)]
     RuleValueError(#[from] InvalidRuleValue),
-    /// Indicates that the specified firewall rule already exists.
-    #[error("The firewall rule already exists")]
-    RuleAlreadyExists,
-    /// Indicates that a required `HashSet` is either empty or None.
-    #[error("Empty or None HashSet")]
-    EmptyHashSet,
 }
 
 /// Errors related to setting firewall rule properties, with specific variants for each property.
