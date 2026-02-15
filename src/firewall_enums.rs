@@ -7,7 +7,7 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
     NET_FW_RULE_DIR_MAX, NET_FW_RULE_DIR_OUT, NET_FW_RULE_DIRECTION,
 };
 
-use crate::errors::WindowsFirewallError;
+use crate::errors::InvalidRuleValue;
 
 /// Represents the possible firewall protocols in Windows
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -40,9 +40,9 @@ pub enum ProtocolFirewallWindows {
 
 /// Implements conversion from `i32` to `ProtocolFirewallWindows`
 impl TryFrom<i32> for ProtocolFirewallWindows {
-    type Error = WindowsFirewallError;
+    type Error = InvalidRuleValue;
 
-    fn try_from(value: i32) -> Result<Self, WindowsFirewallError> {
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             x if x == NET_FW_IP_PROTOCOL_TCP.0 => Ok(Self::Tcp),
             x if x == NET_FW_IP_PROTOCOL_UDP.0 => Ok(Self::Udp),
@@ -56,7 +56,7 @@ impl TryFrom<i32> for ProtocolFirewallWindows {
             51 => Ok(Self::Ah),
             132 => Ok(Self::Sctp),
             x if x == NET_FW_IP_PROTOCOL_ANY.0 => Ok(Self::Any),
-            _ => Err(WindowsFirewallError::InvalidNetFwIpProtocol),
+            _ => Err(InvalidRuleValue::NetFwIpProtocol),
         }
     }
 }
@@ -94,16 +94,14 @@ pub enum DirectionFirewallWindows {
 
 /// Implements conversion from `NET_FW_RULE_DIRECTION` to `DirectionFirewallWindows`
 impl TryFrom<NET_FW_RULE_DIRECTION> for DirectionFirewallWindows {
-    type Error = WindowsFirewallError;
+    type Error = InvalidRuleValue;
 
-    fn try_from(value: NET_FW_RULE_DIRECTION) -> Result<Self, WindowsFirewallError> {
+    fn try_from(value: NET_FW_RULE_DIRECTION) -> Result<Self, Self::Error> {
         match value {
-            // Convert rule direction value to the corresponding enum variant
             NET_FW_RULE_DIR_IN => Ok(Self::In),
             NET_FW_RULE_DIR_OUT => Ok(Self::Out),
             NET_FW_RULE_DIR_MAX => Ok(Self::Max),
-            // Return an error if the value is not recognized
-            _ => Err(WindowsFirewallError::InvalidNetFwRuleDirection),
+            _ => Err(InvalidRuleValue::NetFwRuleDirection),
         }
     }
 }
@@ -112,7 +110,6 @@ impl TryFrom<NET_FW_RULE_DIRECTION> for DirectionFirewallWindows {
 impl From<DirectionFirewallWindows> for NET_FW_RULE_DIRECTION {
     fn from(direction: DirectionFirewallWindows) -> Self {
         match direction {
-            // Convert each enum variant to its corresponding `NET_FW_RULE_DIRECTION` value
             DirectionFirewallWindows::In => NET_FW_RULE_DIR_IN,
             DirectionFirewallWindows::Out => NET_FW_RULE_DIR_OUT,
             DirectionFirewallWindows::Max => NET_FW_RULE_DIR_MAX,
@@ -147,11 +144,10 @@ pub enum ProfileFirewallWindows {
 
 /// Implements conversion from `i32` to `ProfileFirewallWindows`
 impl TryFrom<i32> for ProfileFirewallWindows {
-    type Error = WindowsFirewallError;
+    type Error = InvalidRuleValue;
 
-    fn try_from(value: i32) -> Result<Self, WindowsFirewallError> {
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
-            // Convert integer value to the corresponding enum variant
             x if x == NET_FW_PROFILE2_DOMAIN.0 => Ok(Self::Domain),
             x if x == NET_FW_PROFILE2_PRIVATE.0 => Ok(Self::Private),
             x if x == NET_FW_PROFILE2_PUBLIC.0 => Ok(Self::Public),
@@ -161,8 +157,7 @@ impl TryFrom<i32> for ProfileFirewallWindows {
             x if x == NET_FW_PROFILE_STANDARD.0 => Ok(Self::LegacyStandard),
             x if x == NET_FW_PROFILE_CURRENT.0 => Ok(Self::LegacyCurrent),
             x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(Self::LegacyMax),
-            // Return an error if the value is not recognized
-            _ => Err(WindowsFirewallError::InvalidNetFwProfile),
+            _ => Err(InvalidRuleValue::NetFwProfile),
         }
     }
 }
@@ -171,7 +166,6 @@ impl TryFrom<i32> for ProfileFirewallWindows {
 impl From<ProfileFirewallWindows> for i32 {
     fn from(profile: ProfileFirewallWindows) -> Self {
         match profile {
-            // Convert each enum variant to its corresponding integer value
             ProfileFirewallWindows::Domain => NET_FW_PROFILE2_DOMAIN.0,
             ProfileFirewallWindows::Private => NET_FW_PROFILE2_PRIVATE.0,
             ProfileFirewallWindows::Public => NET_FW_PROFILE2_PUBLIC.0,
@@ -198,16 +192,14 @@ pub enum ActionFirewallWindows {
 
 /// Implements conversion from `NET_FW_ACTION` to `ActionFirewallWindows`
 impl TryFrom<NET_FW_ACTION> for ActionFirewallWindows {
-    type Error = WindowsFirewallError;
+    type Error = InvalidRuleValue;
 
-    fn try_from(action: NET_FW_ACTION) -> Result<Self, WindowsFirewallError> {
+    fn try_from(action: NET_FW_ACTION) -> Result<Self, Self::Error> {
         match action {
-            // Convert action value to the corresponding enum variant
             NET_FW_ACTION_BLOCK => Ok(Self::Block),
             NET_FW_ACTION_ALLOW => Ok(Self::Allow),
             NET_FW_ACTION_MAX => Ok(Self::Max),
-            // Return an error if the value is not recognized
-            _ => Err(WindowsFirewallError::InvalidNetFwAction),
+            _ => Err(InvalidRuleValue::NetFwAction),
         }
     }
 }
@@ -216,7 +208,6 @@ impl TryFrom<NET_FW_ACTION> for ActionFirewallWindows {
 impl From<ActionFirewallWindows> for NET_FW_ACTION {
     fn from(action: ActionFirewallWindows) -> Self {
         match action {
-            // Convert each enum variant to its corresponding `NET_FW_ACTION` value
             ActionFirewallWindows::Block => NET_FW_ACTION_BLOCK,
             ActionFirewallWindows::Allow => NET_FW_ACTION_ALLOW,
             ActionFirewallWindows::Max => NET_FW_ACTION_MAX,
@@ -238,7 +229,7 @@ pub enum InterfaceTypes {
 }
 
 impl FromStr for InterfaceTypes {
-    type Err = String;
+    type Err = InvalidRuleValue;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -246,7 +237,7 @@ impl FromStr for InterfaceTypes {
             "Lan" => Ok(Self::Lan),
             "RemoteAccess" => Ok(Self::RemoteAccess),
             "All" => Ok(Self::All),
-            _ => Err(format!("Invalid interface type: {s}")),
+            _ => Err(InvalidRuleValue::InterfaceTypes),
         }
     }
 }

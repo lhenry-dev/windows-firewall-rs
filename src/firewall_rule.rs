@@ -1,7 +1,6 @@
 use getset::{Getters, Setters};
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::net::IpAddr;
 use typed_builder::TypedBuilder;
 use windows::Win32::Foundation::VARIANT_BOOL;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
@@ -14,12 +13,17 @@ use crate::firewall_enums::{
     ActionFirewallWindows, DirectionFirewallWindows, ProfileFirewallWindows,
     ProtocolFirewallWindows,
 };
+use crate::firewall_rule::firewall_address::FwAddress;
+use crate::firewall_rule::firewall_port::FwPort;
 use crate::utils::{
-    bstr_to_hashset, hashset_to_bstr, hashset_to_variant, is_not_icmp, is_not_tcp_or_udp,
-    to_string_hashset, variant_to_hashset, with_com_initialized,
+    bstr_to_hashset, hashset_to_bstr, hashset_to_variant, into_hashset, is_not_icmp,
+    is_not_tcp_or_udp, variant_to_hashset, with_com_initialized,
 };
 use crate::windows_firewall::{add_rule_or_update, remove_rule, rule_exists, update_rule};
 use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, enable_rule};
+
+pub mod firewall_address;
+pub mod firewall_port;
 
 /// Represents a rule in the Windows Firewall.
 ///
@@ -96,31 +100,31 @@ pub struct WindowsFirewallRule {
     #[getset(get = "pub", set = "pub")]
     protocol: Option<ProtocolFirewallWindows>,
     /// A set of local ports this rule applies to. For example, specify ports like 80 or 443.
-    #[builder(default, setter(strip_option, into))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    local_ports: Option<HashSet<u16>>,
+    local_ports: Option<HashSet<FwPort>>,
     /// A set of remote ports this rule applies to.
-    #[builder(default, setter(strip_option, into))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    remote_ports: Option<HashSet<u16>>,
+    remote_ports: Option<HashSet<FwPort>>,
     /// A set of local IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    local_addresses: Option<HashSet<IpAddr>>,
+    local_addresses: Option<HashSet<FwAddress>>,
     /// A set of remote IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    remote_addresses: Option<HashSet<IpAddr>>,
+    remote_addresses: Option<HashSet<FwAddress>>,
     /// A list of ICMP types and codes this rule applies to, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
     icmp_types_and_codes: Option<String>,
     /// A list of network interfaces this rule applies to, identified by their friendly names.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
     interfaces: Option<HashSet<String>>,
     /// A list of interface types this rule applies to (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceTypes>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
     interface_types: Option<HashSet<InterfaceTypes>>,
     /// The group name this rule belongs to, used for organizing rules.
@@ -601,26 +605,26 @@ pub struct WindowsFirewallRuleSettings {
     /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
     pub(crate) protocol: Option<ProtocolFirewallWindows>,
-    /// A set of local ports associated with the firewall rule.
-    #[builder(default, setter(strip_option, into))]
-    pub(crate) local_ports: Option<HashSet<u16>>,
-    /// A set of remote ports associated with the firewall rule.
-    #[builder(default, setter(strip_option, into))]
-    pub(crate) remote_ports: Option<HashSet<u16>>,
+    /// A set of local ports this rule applies to. For example, specify ports like 80 or 443.
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
+    pub(crate) local_ports: Option<HashSet<FwPort>>,
+    /// A set of remote ports this rule applies to.
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
+    pub(crate) remote_ports: Option<HashSet<FwPort>>,
     /// A set of local addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
-    pub(crate) local_addresses: Option<HashSet<IpAddr>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
+    pub(crate) local_addresses: Option<HashSet<FwAddress>>,
     /// A set of remote addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = IpAddr>| Some(items.into_iter().collect())))]
-    pub(crate) remote_addresses: Option<HashSet<IpAddr>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
+    pub(crate) remote_addresses: Option<HashSet<FwAddress>>,
     /// The ICMP types and codes associated with the rule, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) icmp_types_and_codes: Option<String>,
     /// A set of interfaces associated with the firewall rule.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(to_string_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(into_hashset(items))))]
     pub(crate) interfaces: Option<HashSet<String>>,
     /// A set of interface types associated with the firewall rule (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = InterfaceTypes>| Some(items.into_iter().collect())))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceTypes>>| Some(into_hashset(items))))]
     pub(crate) interface_types: Option<HashSet<InterfaceTypes>>,
     /// The grouping of the rule, used for organizing rules.
     #[builder(default, setter(strip_option, into))]
@@ -710,28 +714,28 @@ mod tests {
         assert_eq!(*rule.protocol(), None);
 
         let mut ports = HashSet::new();
-        ports.insert(80);
+        ports.insert(80.into());
         rule.set_local_ports(Some(ports.clone()));
         assert_eq!(*rule.local_ports(), Some(ports));
         rule.set_local_ports(None);
         assert_eq!(*rule.local_ports(), None);
 
         let mut rports = HashSet::new();
-        rports.insert(443);
+        rports.insert(443.into());
         rule.set_remote_ports(Some(rports.clone()));
         assert_eq!(*rule.remote_ports(), Some(rports));
         rule.set_remote_ports(None);
         assert_eq!(*rule.remote_ports(), None);
 
         let mut addrs = HashSet::new();
-        addrs.insert(IpAddr::from_str("127.0.0.1").unwrap());
+        addrs.insert(IpAddr::from_str("127.0.0.1").unwrap().into());
         rule.set_local_addresses(Some(addrs.clone()));
         assert_eq!(*rule.local_addresses(), Some(addrs));
         rule.set_local_addresses(None);
         assert_eq!(*rule.local_addresses(), None);
 
         let mut raddrs = HashSet::new();
-        raddrs.insert(IpAddr::from_str("8.8.8.8").unwrap());
+        raddrs.insert(IpAddr::from_str("8.8.8.8").unwrap().into());
         rule.set_remote_addresses(Some(raddrs.clone()));
         assert_eq!(*rule.remote_addresses(), Some(raddrs));
         rule.set_remote_addresses(None);

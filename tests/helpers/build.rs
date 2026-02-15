@@ -1,10 +1,11 @@
 use std::net::IpAddr;
 use std::str::FromStr;
-use windows_firewall::WindowsFirewallRule;
 use windows_firewall::{
-    ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes::Lan, InterfaceTypes::Wireless,
-    ProfileFirewallWindows, ProtocolFirewallWindows,
+    ActionFirewallWindows, DirectionFirewallWindows, InterfaceTypes::Lan,
+    InterfaceTypes::RemoteAccess, InterfaceTypes::Wireless, ProfileFirewallWindows,
+    ProtocolFirewallWindows,
 };
+use windows_firewall::{FwAddress, FwPort, FwPortKeyword, WindowsFirewallRule};
 
 pub fn build_base_rule(name: &str) -> WindowsFirewallRule {
     WindowsFirewallRule::builder()
@@ -55,7 +56,7 @@ pub fn build_icmp_full_rule(name: &str) -> WindowsFirewallRule {
             IpAddr::from_str("10.0.0.2").unwrap(),
         ])
         .icmp_types_and_codes("8:0")
-        .interface_types([Wireless, Lan])
+        .interface_types([Wireless, Lan, RemoteAccess])
         .grouping("Group A")
         .profiles(ProfileFirewallWindows::Private)
         .edge_traversal(false)
@@ -107,4 +108,53 @@ pub fn build_rule_for_interface(name: &str, interface_name: &str) -> WindowsFire
         .enabled(true)
         .interfaces([interface_name])
         .build()
+}
+
+pub fn build_rule_for_port(name: &str, port: &FwPort) -> WindowsFirewallRule {
+    let rule_builder = WindowsFirewallRule::builder()
+        .name(name)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true);
+
+    if let FwPort::Keyword(k) = port {
+        let rule_builder = match k {
+            FwPortKeyword::Teredo => rule_builder.protocol(ProtocolFirewallWindows::Udp),
+            _ => rule_builder.protocol(ProtocolFirewallWindows::Tcp),
+        };
+        rule_builder.local_ports([FwPort::from(*k)]).build()
+    } else {
+        rule_builder
+            .protocol(ProtocolFirewallWindows::Udp)
+            .local_ports([port.clone()])
+            .remote_ports([port.clone()])
+            .build()
+    }
+}
+
+pub fn build_rule_for_address(name: &str, address: &FwAddress) -> WindowsFirewallRule {
+    let rule_builder = WindowsFirewallRule::builder()
+        .name(name)
+        .action(ActionFirewallWindows::Allow)
+        .direction(DirectionFirewallWindows::In)
+        .enabled(true);
+
+    if let FwAddress::Keyword(k) = address {
+        rule_builder.remote_addresses([FwAddress::from(*k)]).build()
+    } else if let FwAddress::Ip(ip) = address {
+        rule_builder
+            .local_addresses([FwAddress::from(*ip)])
+            .remote_addresses([FwAddress::from(*ip)])
+            .build()
+    } else if let FwAddress::Cidr(cidr) = address {
+        rule_builder
+            .local_addresses([FwAddress::from(*cidr)])
+            .remote_addresses([FwAddress::from(*cidr)])
+            .build()
+    } else {
+        rule_builder
+            .local_addresses([address.clone()])
+            .remote_addresses([address.clone()])
+            .build()
+    }
 }

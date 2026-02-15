@@ -1,11 +1,14 @@
 use scopeguard::guard;
 use std::{
+    any::type_name,
     collections::HashSet,
     ffi::OsStr,
+    hash::Hash,
     mem::ManuallyDrop,
     ptr::{addr_of, from_ref},
     str::FromStr,
 };
+use tracing::warn;
 use windows::core::HRESULT;
 use windows::{
     Win32::{
@@ -23,6 +26,9 @@ use windows::{
 
 use crate::{ProtocolFirewallWindows, WindowsFirewallError, constants::DWCOINIT};
 
+const BSTR_SEPARATOR: &str = ",";
+const VARIANT_SEPARATOR: &str = "; ";
+
 pub fn is_not_icmp(protocol: ProtocolFirewallWindows) -> bool {
     !matches!(
         protocol,
@@ -37,10 +43,10 @@ pub fn is_not_tcp_or_udp(protocol: ProtocolFirewallWindows) -> bool {
     )
 }
 
-pub fn to_string_hashset<T, I>(items: I) -> HashSet<String>
+pub fn into_hashset<T, U>(items: impl IntoIterator<Item = T>) -> HashSet<U>
 where
-    I: IntoIterator<Item = T>,
-    T: Into<String>,
+    T: Into<U>,
+    U: Eq + Hash,
 {
     items.into_iter().map(Into::into).collect()
 }
@@ -49,29 +55,41 @@ pub fn bstr_to_hashset<T>(bstr: Result<BSTR, windows::core::Error>) -> Option<Ha
 where
     T: FromStr + Eq + std::hash::Hash,
 {
-    bstr.ok()
-        .map(|bstr_value| {
-            let bstr_str = bstr_value.to_string();
-            bstr_str
-                .split(',')
-                .filter_map(|s| {
-                    let trimmed = s.trim();
-                    if !trimmed.is_empty() {
-                        if let Ok(parsed_t) = trimmed.parse::<T>() {
-                            return Some(parsed_t);
-                        }
+    let set: HashSet<T> = bstr
+        .ok()?
+        .to_string()
+        .split(',')
+        .filter_map(|s| parse_item::<T>(s))
+        .collect();
 
-                        if let Some((ip_str, _mask_str)) = trimmed.split_once('/')
-                            && let Ok(parsed_t) = ip_str.parse::<T>()
-                        {
-                            return Some(parsed_t);
-                        }
-                    }
-                    None
-                })
-                .collect::<HashSet<T>>()
-        })
-        .filter(|hash_set| !hash_set.is_empty())
+    if set.is_empty() { None } else { Some(set) }
+}
+
+fn parse_item<T: FromStr>(s: &str) -> Option<T> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Ok(val) = trimmed.parse::<T>() {
+        Some(val)
+    } else {
+        warn!(
+            "Failed to parse '{}' into target type for type : {}",
+            trimmed,
+            type_name::<T>()
+        );
+
+        #[cfg(not(test))]
+        return None;
+
+        #[cfg(test)]
+        panic!(
+            "Failed to parse '{}' into target type for type : {}",
+            trimmed,
+            type_name::<T>()
+        );
+    }
 }
 
 pub fn hashset_to_bstr<T>(hashset: Option<&HashSet<T>>) -> BSTR
@@ -85,7 +103,7 @@ where
                 .iter()
                 .map(ToString::to_string)
                 .collect::<Vec<String>>()
-                .join(",");
+                .join(BSTR_SEPARATOR);
             BSTR::from(joined_str)
         })
         .unwrap_or_default()
@@ -151,7 +169,10 @@ pub fn variant_to_hashset(variant: &VARIANT) -> windows::core::Result<HashSet<St
     let pwstr: PWSTR = unsafe { VariantToStringAlloc(variant) }?;
     let wide_cstr = unsafe { pwstr.to_string() }?;
 
-    let hashset = wide_cstr.split("; ").map(str::to_string).collect();
+    let hashset = wide_cstr
+        .split(VARIANT_SEPARATOR)
+        .map(str::to_string)
+        .collect();
 
     Ok(hashset)
 }
@@ -200,11 +221,10 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Failed to parse 'abc' into target type for type : i32")]
     fn test_convert_bstr_to_hashset_with_invalid_input() {
         let bstr_value = Ok(BSTR::from("1, abc, 3"));
-
         let result: Option<HashSet<i32>> = bstr_to_hashset(bstr_value);
-
         let expected = vec![1, 3].into_iter().collect();
         assert_eq!(result, Some(expected));
     }
