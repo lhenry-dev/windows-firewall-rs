@@ -1,5 +1,6 @@
 use scopeguard::guard;
 use std::{
+    any::type_name,
     collections::HashSet,
     ffi::OsStr,
     hash::Hash,
@@ -76,7 +77,7 @@ fn parse_item<T: FromStr>(s: &str) -> Option<T> {
         warn!(
             "Failed to parse '{}' into target type for type : {}",
             trimmed,
-            std::any::type_name::<T>()
+            type_name::<T>()
         );
 
         #[cfg(not(test))]
@@ -86,7 +87,7 @@ fn parse_item<T: FromStr>(s: &str) -> Option<T> {
         panic!(
             "Failed to parse '{}' into target type for type : {}",
             trimmed,
-            std::any::type_name::<T>()
+            type_name::<T>()
         );
     }
 }

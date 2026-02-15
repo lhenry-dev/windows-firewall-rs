@@ -308,7 +308,7 @@ fn test_direction_and_edge_traversal_transitions() {
 
 #[test]
 #[parallel]
-fn test_add_rules_for_all_fwport_variants() {
+fn test_all_fwport_variants() {
     let fwports = [
         FwPort::Any,
         FwPort::Keyword(FwPortKeyword::Rpc),
@@ -341,7 +341,7 @@ fn test_add_rules_for_all_fwport_variants() {
 
 #[test]
 #[parallel]
-fn test_add_rules_for_all_fwaddress_variants() {
+fn test_all_fwaddress_variants() {
     let fwaddresses = [
         FwAddress::Any,
         FwAddress::Keyword(FwAddressKeyword::DefaultGateway),

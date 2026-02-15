@@ -28,7 +28,8 @@ pub enum FwAddressParseError {
     },
 }
 
-/// Enum representing firewall address tokens (`RemoteAddresses`)
+/// Enum representing firewall address tokens
+/// Theses token can be uses uniquely in `remote_addresses` properties of firewall rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FwAddressKeyword {
     /// "`DefaultGateway`" — the address(es) of the default gateway(s) assigned to the machine
@@ -104,7 +105,7 @@ impl FwAddressRange {
     }
 }
 
-/// Firewall address token (`RemoteAddresses` / `LocalAddresses`)
+/// Firewall address tokenS
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FwAddress {
     /// "*" — any address

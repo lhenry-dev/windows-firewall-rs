@@ -25,7 +25,8 @@ pub enum FwPortParseError {
     },
 }
 
-/// Enum representing firewall port keywords and values (`RemotePorts`)
+/// Enum representing firewall port keywords and values
+/// Theses token can be uses uniquely in `local_ports` properties of firewall rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FwPortKeyword {
     /// "RPC" - the port(s) used by the RPC service, which can vary dynamically and are determined at runtime. The firewall will automatically allow the necessary ports for RPC communication when this keyword is used.
@@ -101,7 +102,7 @@ impl FwPortRange {
     }
 }
 
-/// Firewall port token (`RemotePorts` / `LocalPorts`)
+/// Firewall port token
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FwPort {
     /// "*" — any port
