@@ -6,18 +6,21 @@
 
 mod constants;
 mod errors;
-mod firewall_enums;
 mod firewall_rule;
+mod profile;
+mod rule_ops;
+mod rules_list;
 mod utils;
-mod windows_firewall;
 
 pub use errors::WindowsFirewallError;
-pub use firewall_enums::{Action, Direction, InterfaceType, Profile, Protocol};
-pub use firewall_rule::firewall_address::{Address, AddressKeyword, AddressRange};
-pub use firewall_rule::firewall_port::{Port, PortKeyword, PortRange};
-pub use firewall_rule::{FirewallRule, FirewallRuleUpdate};
-pub use windows_firewall::{
-    add_rule, add_rule_if_not_exists, add_rule_or_update, count_rules, enable_rule,
-    get_active_profile, get_firewall_state, get_rule, list_incoming_rules, list_outgoing_rules,
-    list_rules, remove_rule, rule_exists, set_firewall_state, update_rule,
+pub use firewall_rule::types::address::{Address, AddressKeyword, AddressRange};
+pub use firewall_rule::types::port::{Port, PortKeyword, PortRange};
+pub use firewall_rule::{
+    Action, Direction, FirewallRule, FirewallRuleUpdate, InterfaceType, Profile, Protocol,
 };
+pub use profile::{get_active_profile, get_firewall_state, set_firewall_state};
+pub use rule_ops::{
+    add_rule, add_rule_if_not_exists, add_rule_or_update, enable_rule, get_rule, remove_rule,
+    rule_exists, update_rule,
+};
+pub use rules_list::{count_rules, list_incoming_rules, list_outgoing_rules, list_rules};

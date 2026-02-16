@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::firewall_rule::types::InvalidRuleType;
+
 /// Deriving common traits to automatically implement error handling functionality.
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum WindowsFirewallError {
@@ -12,29 +14,9 @@ pub enum WindowsFirewallError {
     /// Error returned when setting a firewall rule property fails.
     #[error(transparent)]
     SetRuleError(#[from] SetRuleError),
-    /// Error returned when a firewall rule value is invalid.
+    /// Error returned when an invalid rule type is encountered while setting a firewall rule property.
     #[error(transparent)]
-    RuleValueError(#[from] InvalidRuleValue),
-}
-
-/// Errors related to setting firewall rule properties, with specific variants for each property.
-#[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum InvalidRuleValue {
-    /// Indicates that an invalid value was used for `NET_FW_ACTION`.
-    #[error("Invalid NET_FW_ACTION value")]
-    NetFwAction,
-    /// Indicates that an invalid value was used for `NET_FW_PROFILE`.
-    #[error("Invalid NET_FW_PROFILE value")]
-    NetFwProfile,
-    /// Indicates that an invalid value was used for `NET_FW_RULE_DIRECTION`.
-    #[error("Invalid NET_FW_RULE_DIRECTION value")]
-    NetFwRuleDirection,
-    /// Indicates that an invalid value was used for `NET_FW_IP_PROTOCOL`.
-    #[error("Invalid NET_FW_IP_PROTOCOL value")]
-    NetFwIpProtocol,
-    /// Indicates that an invalid value was used for `InterfaceType`.
-    #[error("Invalid InterfaceType value")]
-    InterfaceType,
+    RuleTypeError(#[from] InvalidRuleType),
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
