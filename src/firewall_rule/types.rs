@@ -1,5 +1,8 @@
 use thiserror::Error;
 
+use crate::firewall_rule::types::address::AddressParseError;
+use crate::firewall_rule::types::port::PortParseError;
+
 pub use self::action::Action;
 pub use self::address::Address;
 pub use self::direction::Direction;
@@ -18,7 +21,7 @@ pub mod protocol;
 
 /// Errors related to setting firewall rule properties, with specific variants for each property.
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum InvalidRuleType {
+pub enum InvalidRuleProperty {
     /// Indicates that an invalid value was used for `NET_FW_ACTION`.
     #[error("Invalid NET_FW_ACTION value")]
     NetFwAction,
@@ -34,4 +37,10 @@ pub enum InvalidRuleType {
     /// Indicates that an invalid value was used for `InterfaceType`.
     #[error("Invalid InterfaceType value")]
     InterfaceType,
+    /// Indicates that an invalid value was used for `Address`.
+    #[error(transparent)]
+    Address(#[from] AddressParseError),
+    /// Indicates that an invalid value was used for `Port`.
+    #[error(transparent)]
+    PortParseError(#[from] PortParseError),
 }

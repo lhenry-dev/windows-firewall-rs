@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::firewall_rule::types::InvalidRuleType;
+use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Deriving common traits to automatically implement error handling functionality.
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub enum WindowsFirewallError {
     SetRuleError(#[from] SetRuleError),
     /// Error returned when an invalid rule type is encountered while setting a firewall rule property.
     #[error(transparent)]
-    RuleTypeError(#[from] InvalidRuleType),
+    RuleTypeError(#[from] InvalidRuleProperty),
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]

@@ -2,7 +2,7 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
     NET_FW_IP_PROTOCOL_ANY, NET_FW_IP_PROTOCOL_TCP, NET_FW_IP_PROTOCOL_UDP,
 };
 
-use crate::firewall_rule::types::InvalidRuleType;
+use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the possible firewall protocols in Windows
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -47,7 +47,7 @@ impl Protocol {
 
 /// Implements conversion from `i32` to `Protocol`
 impl TryFrom<i32> for Protocol {
-    type Error = InvalidRuleType;
+    type Error = InvalidRuleProperty;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
@@ -63,7 +63,7 @@ impl TryFrom<i32> for Protocol {
             51 => Ok(Self::Ah),
             132 => Ok(Self::Sctp),
             x if x == NET_FW_IP_PROTOCOL_ANY.0 => Ok(Self::Any),
-            _ => Err(InvalidRuleType::NetFwIpProtocol),
+            _ => Err(InvalidRuleProperty::NetFwIpProtocol),
         }
     }
 }
@@ -90,7 +90,7 @@ impl From<Protocol> for i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Protocol, firewall_rule::types::InvalidRuleType};
+    use crate::{Protocol, firewall_rule::types::InvalidRuleProperty};
 
     #[test]
     fn test_try_from_invalid_net_fw_protocol() {
@@ -98,6 +98,6 @@ mod tests {
 
         let result = Protocol::try_from(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleType::NetFwIpProtocol)));
+        assert!(matches!(result, Err(InvalidRuleProperty::NetFwIpProtocol)));
     }
 }

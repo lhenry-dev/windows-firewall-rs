@@ -4,7 +4,7 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
     NET_FW_PROFILE2_PUBLIC,
 };
 
-use crate::firewall_rule::types::InvalidRuleType;
+use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the various Windows Firewall profiles.
 ///
@@ -33,7 +33,7 @@ pub enum Profile {
 
 /// Implements conversion from `i32` to `Profile`
 impl TryFrom<i32> for Profile {
-    type Error = InvalidRuleType;
+    type Error = InvalidRuleProperty;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
@@ -46,7 +46,7 @@ impl TryFrom<i32> for Profile {
             x if x == NET_FW_PROFILE_STANDARD.0 => Ok(Self::LegacyStandard),
             x if x == NET_FW_PROFILE_CURRENT.0 => Ok(Self::LegacyCurrent),
             x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(Self::LegacyMax),
-            _ => Err(InvalidRuleType::NetFwProfile),
+            _ => Err(InvalidRuleProperty::NetFwProfile),
         }
     }
 }
@@ -70,7 +70,7 @@ impl From<Profile> for i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Profile, firewall_rule::types::InvalidRuleType};
+    use crate::{Profile, firewall_rule::types::InvalidRuleProperty};
 
     #[test]
     fn test_try_from_invalid_net_fw_profile() {
@@ -78,6 +78,6 @@ mod tests {
 
         let result = Profile::try_from(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleType::NetFwProfile)));
+        assert!(matches!(result, Err(InvalidRuleProperty::NetFwProfile)));
     }
 }

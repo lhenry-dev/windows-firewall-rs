@@ -2,7 +2,7 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
     NET_FW_ACTION, NET_FW_ACTION_ALLOW, NET_FW_ACTION_BLOCK, NET_FW_ACTION_MAX,
 };
 
-use crate::firewall_rule::types::InvalidRuleType;
+use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the possible firewall actions in Windows
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -17,14 +17,14 @@ pub enum Action {
 
 /// Implements conversion from `NET_FW_ACTION` to `Action`
 impl TryFrom<NET_FW_ACTION> for Action {
-    type Error = InvalidRuleType;
+    type Error = InvalidRuleProperty;
 
     fn try_from(action: NET_FW_ACTION) -> Result<Self, Self::Error> {
         match action {
             NET_FW_ACTION_BLOCK => Ok(Self::Block),
             NET_FW_ACTION_ALLOW => Ok(Self::Allow),
             NET_FW_ACTION_MAX => Ok(Self::Max),
-            _ => Err(InvalidRuleType::NetFwAction),
+            _ => Err(InvalidRuleProperty::NetFwAction),
         }
     }
 }
@@ -44,7 +44,7 @@ impl From<Action> for NET_FW_ACTION {
 mod tests {
     use windows::Win32::NetworkManagement::WindowsFirewall::NET_FW_ACTION;
 
-    use crate::{Action, firewall_rule::types::InvalidRuleType};
+    use crate::{Action, firewall_rule::types::InvalidRuleProperty};
 
     #[test]
     fn test_try_from_invalid_net_fw_action() {
@@ -52,6 +52,6 @@ mod tests {
 
         let result = Action::try_from(NET_FW_ACTION(invalid_value));
 
-        assert!(matches!(result, Err(InvalidRuleType::NetFwAction)));
+        assert!(matches!(result, Err(InvalidRuleProperty::NetFwAction)));
     }
 }

@@ -39,7 +39,7 @@ pub mod types;
 /// - [`interface_types`](FirewallRule::interface_types): Types of interfaces targeted.
 /// - [`grouping`](FirewallRule::grouping): Group this rule belongs to.
 /// - [`profiles`](FirewallRule::profiles): Profiles this rule applies to.
-/// - [`edge_traversal`](FirewallRule::edge_traversal): Enables edge traversal (default: `false`).
+/// - [`edge_traversal`](FirewallRule::edge_traversal): Enables edge traversal.
 ///
 /// # Example
 /// ```rust

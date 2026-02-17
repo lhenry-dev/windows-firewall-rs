@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use crate::firewall_rule::types::InvalidRuleType;
+use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Enum representing different types of network interfaces.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -16,7 +16,7 @@ pub enum InterfaceType {
 }
 
 impl FromStr for InterfaceType {
-    type Err = InvalidRuleType;
+    type Err = InvalidRuleProperty;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -24,7 +24,7 @@ impl FromStr for InterfaceType {
             "Lan" => Ok(Self::Lan),
             "RemoteAccess" => Ok(Self::RemoteAccess),
             "All" => Ok(Self::All),
-            _ => Err(InvalidRuleType::InterfaceType),
+            _ => Err(InvalidRuleProperty::InterfaceType),
         }
     }
 }
@@ -45,7 +45,7 @@ impl fmt::Display for InterfaceType {
 mod tests {
     use std::str::FromStr;
 
-    use crate::{InterfaceType, firewall_rule::types::InvalidRuleType};
+    use crate::{InterfaceType, firewall_rule::types::InvalidRuleProperty};
 
     #[test]
     fn test_try_from_invalid_net_fw_interface_type() {
@@ -53,6 +53,6 @@ mod tests {
 
         let result = InterfaceType::from_str(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleType::InterfaceType)));
+        assert!(matches!(result, Err(InvalidRuleProperty::InterfaceType)));
     }
 }
