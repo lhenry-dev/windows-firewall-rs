@@ -7,10 +7,9 @@ use scopeguard::guard;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::{
-    DirectionFirewallWindows, FwAddress, FwAddressKeyword, FwAddressRange, FwPortKeyword,
-    FwPortRange, ProtocolFirewallWindows, count_rules,
+    Address, AddressKeyword, AddressRange, Direction, PortKeyword, PortRange, Protocol, count_rules,
 };
-use windows_firewall::{FwPort, WindowsFirewallRuleSettings};
+use windows_firewall::{FirewallRuleUpdate, Port};
 use windows_firewall::{get_rule, list_incoming_rules, list_outgoing_rules, list_rules};
 
 use helpers::build::{
@@ -144,18 +143,18 @@ fn test_enable_rule() {
 #[parallel]
 fn test_all_protocol_transitions() {
     let protocols = [
-        (ProtocolFirewallWindows::Tcp, "Tcp"),
-        (ProtocolFirewallWindows::Udp, "Udp"),
-        (ProtocolFirewallWindows::Icmpv4, "Icmpv4"),
-        (ProtocolFirewallWindows::Icmpv6, "Icmpv6"),
-        (ProtocolFirewallWindows::Igmp, "Igmp"),
-        (ProtocolFirewallWindows::Ipv4, "Ipv4"),
-        (ProtocolFirewallWindows::Ipv6, "Ipv6"),
-        (ProtocolFirewallWindows::Gre, "Gre"),
-        (ProtocolFirewallWindows::Esp, "Esp"),
-        (ProtocolFirewallWindows::Ah, "Ah"),
-        (ProtocolFirewallWindows::Sctp, "Sctp"),
-        (ProtocolFirewallWindows::Any, "Any"),
+        (Protocol::Tcp, "Tcp"),
+        (Protocol::Udp, "Udp"),
+        (Protocol::Icmpv4, "Icmpv4"),
+        (Protocol::Icmpv6, "Icmpv6"),
+        (Protocol::Igmp, "Igmp"),
+        (Protocol::Ipv4, "Ipv4"),
+        (Protocol::Ipv6, "Ipv6"),
+        (Protocol::Gre, "Gre"),
+        (Protocol::Esp, "Esp"),
+        (Protocol::Ah, "Ah"),
+        (Protocol::Sctp, "Sctp"),
+        (Protocol::Any, "Any"),
     ];
 
     for (proto_from, label_from) in &protocols {
@@ -172,9 +171,8 @@ fn test_all_protocol_transitions() {
             let fetched = get_rule(&rule_name).unwrap();
             assert_firewall_rule_eq(&fetched, &rule);
 
-            let new_settings = WindowsFirewallRuleSettings::from(build_full_rule_for_protocol(
-                &rule_name, *proto_to,
-            ));
+            let new_settings =
+                FirewallRuleUpdate::from(build_full_rule_for_protocol(&rule_name, *proto_to));
 
             let rule_update = rule.update(&new_settings);
 
@@ -233,7 +231,7 @@ fn test_update_rule_per_network_interface() {
             );
         }
 
-        let updated_settings = WindowsFirewallRuleSettings::builder()
+        let updated_settings = FirewallRuleUpdate::builder()
             .interfaces([interface_name])
             .build();
 
@@ -259,8 +257,8 @@ fn test_update_rule_per_network_interface() {
 #[parallel]
 fn test_direction_and_edge_traversal_transitions() {
     let states = [
-        (DirectionFirewallWindows::In, true, "In_EdgeTrue"),
-        (DirectionFirewallWindows::Out, false, "Out_EdgeFalse"),
+        (Direction::In, true, "In_EdgeTrue"),
+        (Direction::Out, false, "Out_EdgeFalse"),
     ];
 
     for (dir_from, edge_from, label_from) in &states {
@@ -283,7 +281,7 @@ fn test_direction_and_edge_traversal_transitions() {
             let fetched = get_rule(&rule_name).unwrap();
             assert_firewall_rule_eq(&fetched, &rule);
 
-            let new_settings = WindowsFirewallRuleSettings::builder()
+            let new_settings = FirewallRuleUpdate::builder()
                 .direction(*dir_to)
                 .edge_traversal(*edge_to)
                 .build();
@@ -308,24 +306,24 @@ fn test_direction_and_edge_traversal_transitions() {
 
 #[test]
 #[parallel]
-fn test_all_fwport_variants() {
-    let fwports = [
-        FwPort::Any,
-        FwPort::Keyword(FwPortKeyword::Rpc),
-        FwPort::Keyword(FwPortKeyword::RpcEpmap),
-        // FwPort::Keyword(FwPortKeyword::IpHttps),
-        // FwPort::Keyword(FwPortKeyword::Ply2Disc),
-        FwPort::Keyword(FwPortKeyword::Teredo),
-        FwPort::Port(80),
-        FwPort::Port(443),
-        FwPort::Range(FwPortRange {
+fn test_all_port_variants() {
+    let ports = [
+        Port::Any,
+        Port::Keyword(PortKeyword::Rpc),
+        Port::Keyword(PortKeyword::RpcEpmap),
+        // Port::Keyword(PortKeyword::IpHttps),
+        // Port::Keyword(PortKeyword::Ply2Disc),
+        Port::Keyword(PortKeyword::Teredo),
+        Port::Port(80),
+        Port::Port(443),
+        Port::Range(PortRange {
             start: 1000,
             end: 2000,
         }),
     ];
 
-    for (i, port) in fwports.iter().enumerate() {
-        let rule_name = format!("TEST_FWPORT_RULE_{}", i);
+    for (i, port) in ports.iter().enumerate() {
+        let rule_name = format!("TEST_Port_RULE_{}", i);
 
         let rule = build_rule_for_port(&rule_name, port);
         let _guard = AutoRemoveFirewallRule::add(&rule);
@@ -341,18 +339,18 @@ fn test_all_fwport_variants() {
 
 #[test]
 #[parallel]
-fn test_all_fwaddress_variants() {
-    let fwaddresses = [
-        FwAddress::Any,
-        FwAddress::Keyword(FwAddressKeyword::DefaultGateway),
-        FwAddress::Keyword(FwAddressKeyword::Dhcp),
-        FwAddress::Keyword(FwAddressKeyword::Dns),
-        FwAddress::Keyword(FwAddressKeyword::Wins),
-        FwAddress::Keyword(FwAddressKeyword::LocalSubnet),
-        FwAddress::Ip(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
-        FwAddress::Cidr(IpNet::new(IpAddr::V4(Ipv4Addr::new(192, 168, 0, 0)), 24).unwrap()),
-        FwAddress::Range(
-            FwAddressRange::new(
+fn test_all_address_variants() {
+    let addresses = [
+        Address::Any,
+        Address::Keyword(AddressKeyword::DefaultGateway),
+        Address::Keyword(AddressKeyword::Dhcp),
+        Address::Keyword(AddressKeyword::Dns),
+        Address::Keyword(AddressKeyword::Wins),
+        Address::Keyword(AddressKeyword::LocalSubnet),
+        Address::Ip(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+        Address::Cidr(IpNet::new(IpAddr::V4(Ipv4Addr::new(192, 168, 0, 0)), 24).unwrap()),
+        Address::Range(
+            AddressRange::new(
                 IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 IpAddr::V4(Ipv4Addr::new(192, 168, 0, 255)),
             )
@@ -360,8 +358,8 @@ fn test_all_fwaddress_variants() {
         ),
     ];
 
-    for (i, address) in fwaddresses.iter().enumerate() {
-        let rule_name = format!("TEST_FWADDRESS_RULE_{}", i);
+    for (i, address) in addresses.iter().enumerate() {
+        let rule_name = format!("TEST_Address_RULE_{}", i);
 
         let rule = build_rule_for_address(&rule_name, address);
         let _guard = AutoRemoveFirewallRule::add(&rule);

@@ -3,70 +3,62 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use typed_builder::TypedBuilder;
 use windows::Win32::Foundation::VARIANT_BOOL;
-use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, NetFwRule};
-use windows::Win32::System::Com::CoCreateInstance;
+use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::core::BSTR;
 
-use crate::constants::DWCLSCONTEXT;
 use crate::errors::{SetRuleError, WindowsFirewallError};
-use crate::firewall_enums::{
-    ActionFirewallWindows, DirectionFirewallWindows, ProfileFirewallWindows,
-    ProtocolFirewallWindows,
-};
-use crate::firewall_rule::firewall_address::FwAddress;
-use crate::firewall_rule::firewall_port::FwPort;
 use crate::utils::{
-    bstr_to_hashset, hashset_to_bstr, hashset_to_variant, into_hashset, is_not_icmp,
-    is_not_tcp_or_udp, variant_to_hashset, with_com_initialized,
+    BstrExt, bstr_to_hashset, hashset_to_bstr, hashset_to_variant, into_hashset,
+    variant_to_hashset, with_rule,
 };
-use crate::windows_firewall::{add_rule_or_update, remove_rule, rule_exists, update_rule};
-use crate::{InterfaceTypes, add_rule, add_rule_if_not_exists, enable_rule};
 
-pub mod firewall_address;
-pub mod firewall_port;
+pub use self::types::{Action, Address, Direction, InterfaceType, Port, Profile, Protocol};
+
+pub mod operations;
+pub mod types;
 
 /// Represents a rule in the Windows Firewall.
 ///
 /// # Mandatory Fields
-/// - [`name`](WindowsFirewallRule::name): The friendly name of the rule. *(Must not contain `|` or be `"all"`)*
-/// - [`direction`](WindowsFirewallRule::direction): The direction of the traffic (e.g., `Inbound`, `Outbound`).
-/// - [`enabled`](WindowsFirewallRule::enabled): Whether the rule is enabled.
-/// - [`action`](WindowsFirewallRule::action): The action taken (e.g., `Allow`, `Block`).
+/// - [`name`](FirewallRule::name): The friendly name of the rule. *(Must not contain `|` or be `"all"`)*
+/// - [`direction`](FirewallRule::direction): The direction of the traffic (e.g., `Inbound`, `Outbound`).
+/// - [`enabled`](FirewallRule::enabled): Whether the rule is enabled.
+/// - [`action`](FirewallRule::action): The action taken (e.g., `Allow`, `Block`).
 ///
 /// # Optional Fields
-/// - [`description`](WindowsFirewallRule::description): Description of the rule. *(Must not contain `|`)*
-/// - [`application_name`](WindowsFirewallRule::application_name): Friendly app name.
-/// - [`service_name`](WindowsFirewallRule::service_name): Service name of the app.
-/// - [`protocol`](WindowsFirewallRule::protocol): IP protocol (e.g., [`ProtocolFirewallWindows::Tcp`]).
-/// - [`local_ports`](WindowsFirewallRule::local_ports): Local ports list.
-/// - [`remote_ports`](WindowsFirewallRule::remote_ports): Remote ports list.
-/// - [`local_addresses`](WindowsFirewallRule::local_addresses): Local addresses.
-/// - [`remote_addresses`](WindowsFirewallRule::remote_addresses): Remote addresses.
-/// - [`icmp_types_and_codes`](WindowsFirewallRule::icmp_types_and_codes): ICMP types & codes.
-/// - [`interfaces`](WindowsFirewallRule::interfaces): Interfaces targeted by the rule.
-/// - [`interface_types`](WindowsFirewallRule::interface_types): Types of interfaces targeted.
-/// - [`grouping`](WindowsFirewallRule::grouping): Group this rule belongs to.
-/// - [`profiles`](WindowsFirewallRule::profiles): Profiles this rule applies to.
-/// - [`edge_traversal`](WindowsFirewallRule::edge_traversal): Enables edge traversal (default: `false`).
+/// - [`description`](FirewallRule::description): Description of the rule. *(Must not contain `|`)*
+/// - [`application_name`](FirewallRule::application_name): Friendly app name.
+/// - [`service_name`](FirewallRule::service_name): Service name of the app.
+/// - [`protocol`](FirewallRule::protocol): IP protocol (e.g., [`Protocol::Tcp`]).
+/// - [`local_ports`](FirewallRule::local_ports): Local ports list.
+/// - [`remote_ports`](FirewallRule::remote_ports): Remote ports list.
+/// - [`local_addresses`](FirewallRule::local_addresses): Local addresses.
+/// - [`remote_addresses`](FirewallRule::remote_addresses): Remote addresses.
+/// - [`icmp_types_and_codes`](FirewallRule::icmp_types_and_codes): ICMP types & codes.
+/// - [`interfaces`](FirewallRule::interfaces): Interfaces targeted by the rule.
+/// - [`interface_types`](FirewallRule::interface_types): Types of interfaces targeted.
+/// - [`grouping`](FirewallRule::grouping): Group this rule belongs to.
+/// - [`profiles`](FirewallRule::profiles): Profiles this rule applies to.
+/// - [`edge_traversal`](FirewallRule::edge_traversal): Enables edge traversal.
 ///
 /// # Example
 /// ```rust
-/// use windows_firewall::{WindowsFirewallRule, ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows};
+/// use windows_firewall::{FirewallRule, Action, Direction, Protocol};
 ///
-/// let rule = WindowsFirewallRule::builder()
+/// let rule = FirewallRule::builder()
 /// .name("Allow HTTP")
-/// .action(ActionFirewallWindows::Allow)
-/// .direction(DirectionFirewallWindows::In)
+/// .action(Action::Allow)
+/// .direction(Direction::In)
 /// .enabled(true)
 /// .description("Allow inbound HTTP traffic")
-/// .protocol(ProtocolFirewallWindows::Tcp)
+/// .protocol(Protocol::Tcp)
 /// .local_ports([80])
 /// .build();
 ///
 /// println!("Firewall Rule: {:?}", rule);
 /// ```
 #[derive(Debug, Clone, Getters, Setters, TypedBuilder)]
-pub struct WindowsFirewallRule {
+pub struct FirewallRule {
     /// The user-friendly name of the rule. It must not contain the "|" character and cannot be "all".
     #[builder(setter(into))]
     #[getset(get = "pub", set = "pub")]
@@ -74,7 +66,7 @@ pub struct WindowsFirewallRule {
     /// The direction of the traffic this rule applies to (e.g., inbound or outbound).
     #[builder(setter(into))]
     #[getset(get = "pub", set = "pub")]
-    direction: DirectionFirewallWindows,
+    direction: Direction,
     /// Indicates whether the rule is enabled (active) or disabled.
     #[builder(setter(into))]
     #[getset(get = "pub", set = "pub")]
@@ -82,7 +74,7 @@ pub struct WindowsFirewallRule {
     /// The action to take when the rule conditions are met (e.g., allow or block).
     #[builder(setter(into))]
     #[getset(get = "pub", set = "pub")]
-    action: ActionFirewallWindows,
+    action: Action,
     /// A brief description of the rule's purpose or function. Must not contain the "|" character.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
@@ -98,23 +90,23 @@ pub struct WindowsFirewallRule {
     /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
-    protocol: Option<ProtocolFirewallWindows>,
+    protocol: Option<Protocol>,
     /// A set of local ports this rule applies to. For example, specify ports like 80 or 443.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Port>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    local_ports: Option<HashSet<FwPort>>,
+    local_ports: Option<HashSet<Port>>,
     /// A set of remote ports this rule applies to.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Port>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    remote_ports: Option<HashSet<FwPort>>,
+    remote_ports: Option<HashSet<Port>>,
     /// A set of local IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Address>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    local_addresses: Option<HashSet<FwAddress>>,
+    local_addresses: Option<HashSet<Address>>,
     /// A set of remote IP addresses this rule applies to. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Address>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    remote_addresses: Option<HashSet<FwAddress>>,
+    remote_addresses: Option<HashSet<Address>>,
     /// A list of ICMP types and codes this rule applies to, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
@@ -124,9 +116,9 @@ pub struct WindowsFirewallRule {
     #[getset(get = "pub", set = "pub")]
     interfaces: Option<HashSet<String>>,
     /// A list of interface types this rule applies to (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceTypes>>| Some(into_hashset(items))))]
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceType>>| Some(into_hashset(items))))]
     #[getset(get = "pub", set = "pub")]
-    interface_types: Option<HashSet<InterfaceTypes>>,
+    interface_types: Option<HashSet<InterfaceType>>,
     /// The group name this rule belongs to, used for organizing rules.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
@@ -134,331 +126,35 @@ pub struct WindowsFirewallRule {
     /// The profiles this rule is associated with (e.g., Domain, Private, Public).
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
-    profiles: Option<ProfileFirewallWindows>,
+    profiles: Option<Profile>,
     /// Indicates whether edge traversal is enabled, allowing traffic to bypass NAT devices.
     #[builder(default, setter(strip_option, into))]
     #[getset(get = "pub", set = "pub")]
     edge_traversal: Option<bool>,
 }
 
-impl WindowsFirewallRule {
-    /// Adds a new firewall rule to the system.
-    ///
-    /// This function creates and adds a new firewall rule based on the current instance's properties.
-    /// The rule is registered with the Windows Firewall, applying the specified settings such as
-    /// name, direction, action, and other parameters.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's fields.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure or failure to add rule),
-    /// it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Adding the firewall rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn add(&self) -> Result<(), WindowsFirewallError> {
-        add_rule(self)
-    }
-
-    /// Adds a new firewall rule to the system only if a rule with the same name doesn't exist.
-    ///
-    /// This function first checks if a rule with the given name exists, and if not,
-    /// adds the new rule to the Windows Firewall.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's fields.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added successfully,
-    /// it returns `Ok(true)`. If the rule already exists, it returns `Ok(false)`. In case of an error
-    /// (e.g., COM initialization failure or failure to add rule), it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Checking if the rule exists.
-    /// - Adding the firewall rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn add_if_not_exists(&self) -> Result<bool, WindowsFirewallError> {
-        add_rule_if_not_exists(self)
-    }
-
-    /// Adds a new firewall rule to the system or updates an existing rule with the same name.
-    ///
-    /// This function first checks if a rule with the given name exists. If it does, the function updates
-    /// the existing rule with the new settings. If the rule does not exist, it adds a new rule to the
-    /// Windows Firewall.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's fields.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule is added
-    /// successfully, it returns `Ok(true)`. If the rule already exists and was updated, it returns `Ok(false)`.
-    /// In case of an error (e.g., COM initialization failure, failure to add or update the rule), it returns a
-    /// [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Fetching the existing rule or adding the new rule.
-    /// - Updating the firewall rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn add_or_update(&self) -> Result<bool, WindowsFirewallError> {
-        add_rule_or_update(self)
-    }
-
-    /// Deletes an existing firewall rule from the system.
-    ///
-    /// This function removes a firewall rule identified by its name. Once deleted, the rule
-    /// can no longer be applied, and any associated settings are lost.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's [`name`](WindowsFirewallRule::name) field.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is removed successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found),
-    /// it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Removing the rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn remove(self) -> Result<(), WindowsFirewallError> {
-        remove_rule(&self.name)?;
-        Ok(())
-    }
-
-    /// Updates an existing firewall rule with new settings.
-    ///
-    /// This function modifies an existing firewall rule based on the provided [`settings`](WindowsFirewallRuleSettings).
-    /// It updates various properties such as name, direction, action, protocol, and addresses.
-    /// If the protocol is ICMP (IPv4 or IPv6), the function ensures that local and remote ports
-    /// are cleared, as they are not applicable to ICMP.
-    ///
-    /// # Arguments
-    ///
-    /// * `settings` - A reference to a [`WindowsFirewallRuleSettings`] struct containing the new
-    ///   configuration parameters for the firewall rule.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
-    /// it returns `Ok(())`. In case of an error (e.g., COM initialization failure, rule not found, or failure
-    /// to update the rule), it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Fetching the rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn update(
-        &mut self,
-        settings: &WindowsFirewallRuleSettings,
-    ) -> Result<(), WindowsFirewallError> {
-        update_rule(&self.name, settings)?;
-
-        if let Some(name) = &settings.name {
-            self.name = name.clone();
-        }
-        if let Some(direction) = &settings.direction {
-            self.direction = *direction;
-        }
-        if let Some(enabled) = settings.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(action) = &settings.action {
-            self.action = *action;
-        }
-        if let Some(description) = &settings.description {
-            self.description = Some(description.clone());
-        }
-        if let Some(application_name) = &settings.application_name {
-            self.application_name = Some(application_name.clone());
-        }
-        if let Some(service_name) = &settings.service_name {
-            self.service_name = Some(service_name.clone());
-        }
-        if let Some(protocol) = &settings.protocol {
-            if is_not_tcp_or_udp(*protocol) {
-                self.local_ports = None;
-                self.remote_ports = None;
-            }
-            if is_not_icmp(*protocol) {
-                self.icmp_types_and_codes = None;
-            }
-            self.protocol = Some(*protocol);
-        }
-        if let Some(local_ports) = &settings.local_ports {
-            self.local_ports = Some(local_ports.clone());
-        }
-        if let Some(remote_ports) = &settings.remote_ports {
-            self.remote_ports = Some(remote_ports.clone());
-        }
-        if let Some(local_addresses) = &settings.local_addresses {
-            self.local_addresses = Some(local_addresses.clone());
-        }
-        if let Some(remote_addresses) = &settings.remote_addresses {
-            self.remote_addresses = Some(remote_addresses.clone());
-        }
-        if let Some(icmp_types_and_codes) = &settings.icmp_types_and_codes {
-            self.icmp_types_and_codes = Some(icmp_types_and_codes.clone());
-        }
-        if let Some(interfaces) = &settings.interfaces {
-            self.interfaces = Some(interfaces.clone());
-        }
-        if let Some(interface_types) = &settings.interface_types {
-            self.interface_types = Some(interface_types.clone());
-        }
-        if let Some(grouping) = &settings.grouping {
-            self.grouping = Some(grouping.clone());
-        }
-        if let Some(profiles) = &settings.profiles {
-            self.profiles = Some(*profiles);
-        }
-        if let Some(edge_traversal) = &settings.edge_traversal {
-            self.edge_traversal = Some(*edge_traversal);
-        }
-        Ok(())
-    }
-
-    /// Enables or disables an existing firewall rule.
-    ///
-    /// This function modifies the state of a firewall rule based on the `enable` parameter.
-    /// If `enable` is `true`, the rule is enabled; otherwise, it is disabled. The function
-    /// updates the `enabled` field accordingly.
-    ///
-    /// # Arguments
-    ///
-    /// * `enable` - A boolean indicating whether to enable (`true`) or disable (`false`) the rule.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<(), WindowsFirewallError>`](WindowsFirewallError). If the rule is updated successfully,
-    /// it returns `Ok(())`. If an error occurs (e.g., COM initialization failure, rule not found),
-    /// it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
-    /// - COM initialization [`WindowsFirewallError::CoInitializeExFailed`].
-    /// - Fetching the rule.
-    /// - Enabling or disabling the rule.
-    ///
-    /// # Security
-    ///
-    /// ⚠️ This function requires **administrative privileges**.
-    pub fn enable(&mut self, enable: bool) -> Result<(), WindowsFirewallError> {
-        enable_rule(&self.name, enable)?;
-        self.enabled = enable;
-        Ok(())
-    }
-
-    /// Checks if a firewall rule with the given name exists.
-    ///
-    /// This function initializes COM, creates a firewall policy object, and checks if a rule
-    /// with the specified name exists in the Windows Firewall rules list.
-    ///
-    /// # Arguments
-    ///
-    /// This function does not take any arguments, as it operates on the current instance's [`name`](WindowsFirewallRule::name) field.
-    ///
-    /// # Returns
-    ///
-    /// This function returns a [`Result<bool, WindowsFirewallError>`](WindowsFirewallError). If the rule exists, it returns `Ok(true)`,
-    /// otherwise it returns `Ok(false)`. In case of an error (e.g., COM initialization failure or issue
-    /// with firewall policy), it returns a [`WindowsFirewallError`].
-    ///
-    /// # Errors
-    ///
-    /// This function may return a [`WindowsFirewallError`] in case of failures during COM initialization
-    /// or while interacting with the firewall policy object.
-    ///
-    /// # Security
-    ///
-    /// This function does not require administrative privileges.
-    pub fn exists(&self) -> Result<bool, WindowsFirewallError> {
-        rule_exists(&self.name)
-    }
-}
-
-impl TryFrom<INetFwRule> for WindowsFirewallRule {
+impl TryFrom<INetFwRule> for FirewallRule {
     type Error = WindowsFirewallError;
 
     fn try_from(fw_rule: INetFwRule) -> Result<Self, WindowsFirewallError> {
         unsafe {
             Ok(Self {
-                name: fw_rule.Name().map(|bstr| bstr.to_string())?,
+                name: fw_rule.Name().to_required_string()?,
                 direction: fw_rule.Direction()?.try_into()?,
                 enabled: fw_rule.Enabled()?.into(),
                 action: fw_rule.Action()?.try_into()?,
-                description: fw_rule
-                    .Description()
-                    .ok()
-                    .map(|bstr| bstr.to_string())
-                    .filter(|s| !s.is_empty()),
-                application_name: fw_rule
-                    .ApplicationName()
-                    .ok()
-                    .map(|bstr| bstr.to_string())
-                    .filter(|s| !s.is_empty()),
-                service_name: fw_rule
-                    .ServiceName()
-                    .ok()
-                    .map(|bstr| bstr.to_string())
-                    .filter(|s| !s.is_empty()),
+                description: fw_rule.Description().to_optional_string(),
+                application_name: fw_rule.ApplicationName().to_optional_string(),
+                service_name: fw_rule.ServiceName().to_optional_string(),
                 protocol: fw_rule.Protocol()?.try_into().ok(),
                 local_ports: bstr_to_hashset(fw_rule.LocalPorts()),
                 remote_ports: bstr_to_hashset(fw_rule.RemotePorts()),
                 local_addresses: bstr_to_hashset(fw_rule.LocalAddresses()),
                 remote_addresses: bstr_to_hashset(fw_rule.RemoteAddresses()),
-                icmp_types_and_codes: fw_rule
-                    .IcmpTypesAndCodes()
-                    .ok()
-                    .map(|bstr| bstr.to_string())
-                    .filter(|s| !s.is_empty()),
+                icmp_types_and_codes: fw_rule.IcmpTypesAndCodes().to_optional_string(),
                 interfaces: Some(variant_to_hashset(&fw_rule.Interfaces()?)?),
                 interface_types: bstr_to_hashset(fw_rule.InterfaceTypes()),
-                grouping: fw_rule
-                    .Grouping()
-                    .ok()
-                    .map(|bstr| bstr.to_string())
-                    .filter(|s| !s.is_empty()),
+                grouping: fw_rule.Grouping().to_optional_string(),
                 profiles: fw_rule.Profiles()?.try_into().ok(),
                 edge_traversal: fw_rule.EdgeTraversal().ok().map(VARIANT_BOOL::as_bool),
             })
@@ -466,94 +162,128 @@ impl TryFrom<INetFwRule> for WindowsFirewallRule {
     }
 }
 
-impl TryFrom<&WindowsFirewallRule> for INetFwRule {
+impl TryFrom<&FirewallRule> for INetFwRule {
     type Error = WindowsFirewallError;
 
-    fn try_from(rule: &WindowsFirewallRule) -> Result<Self, WindowsFirewallError> {
-        with_com_initialized(|| unsafe {
-            let fw_rule: Self = CoCreateInstance(&NetFwRule, None, DWCLSCONTEXT)?;
-
-            fw_rule
-                .SetName(&BSTR::from(&rule.name))
-                .map_err(SetRuleError::Name)?;
-            fw_rule
-                .SetDirection(rule.direction.into())
-                .map_err(SetRuleError::Direction)?;
-            fw_rule
-                .SetEnabled(rule.enabled.into())
-                .map_err(SetRuleError::Enabled)?;
-            fw_rule
-                .SetAction(rule.action.into())
-                .map_err(SetRuleError::Action)?;
-            if let Some(ref description) = rule.description {
+    fn try_from(rule: &FirewallRule) -> Result<Self, WindowsFirewallError> {
+        with_rule(|fw_rule| {
+            unsafe {
                 fw_rule
-                    .SetDescription(&BSTR::from(description))
-                    .map_err(SetRuleError::Description)?;
+                    .SetName(&BSTR::from(&rule.name))
+                    .map_err(SetRuleError::Name)
+            }?;
+            unsafe {
+                fw_rule
+                    .SetDirection(rule.direction.into())
+                    .map_err(SetRuleError::Direction)
+            }?;
+            unsafe {
+                fw_rule
+                    .SetEnabled(rule.enabled.into())
+                    .map_err(SetRuleError::Enabled)
+            }?;
+            unsafe {
+                fw_rule
+                    .SetAction(rule.action.into())
+                    .map_err(SetRuleError::Action)
+            }?;
+            if let Some(ref description) = rule.description {
+                unsafe {
+                    fw_rule
+                        .SetDescription(&BSTR::from(description))
+                        .map_err(SetRuleError::Description)
+                }?;
             }
             if let Some(ref app_name) = rule.application_name {
-                fw_rule
-                    .SetApplicationName(&BSTR::from(app_name))
-                    .map_err(SetRuleError::ApplicationName)?;
+                unsafe {
+                    fw_rule
+                        .SetApplicationName(&BSTR::from(app_name))
+                        .map_err(SetRuleError::ApplicationName)
+                }?;
             }
             if let Some(ref service_name) = rule.service_name {
-                fw_rule
-                    .SetServiceName(&BSTR::from(service_name))
-                    .map_err(SetRuleError::ServiceName)?;
+                unsafe {
+                    fw_rule
+                        .SetServiceName(&BSTR::from(service_name))
+                        .map_err(SetRuleError::ServiceName)
+                }?;
             }
             if let Some(protocol) = rule.protocol {
-                fw_rule
-                    .SetProtocol(protocol.into())
-                    .map_err(SetRuleError::Protocol)?;
+                unsafe {
+                    fw_rule
+                        .SetProtocol(protocol.into())
+                        .map_err(SetRuleError::Protocol)
+                }?;
             }
             if let Some(ref local_ports) = rule.local_ports {
-                fw_rule
-                    .SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
-                    .map_err(SetRuleError::LocalPorts)?;
+                unsafe {
+                    fw_rule
+                        .SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
+                        .map_err(SetRuleError::LocalPorts)
+                }?;
             }
             if let Some(ref remote_ports) = rule.remote_ports {
-                fw_rule
-                    .SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
-                    .map_err(SetRuleError::RemotePorts)?;
+                unsafe {
+                    fw_rule
+                        .SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
+                        .map_err(SetRuleError::RemotePorts)
+                }?;
             }
             if let Some(ref local_addresses) = rule.local_addresses {
-                fw_rule
-                    .SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
-                    .map_err(SetRuleError::LocalAddresses)?;
+                unsafe {
+                    fw_rule
+                        .SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
+                        .map_err(SetRuleError::LocalAddresses)
+                }?;
             }
             if let Some(ref remote_addresses) = rule.remote_addresses {
-                fw_rule
-                    .SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
-                    .map_err(SetRuleError::RemoteAddresses)?;
+                unsafe {
+                    fw_rule
+                        .SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
+                        .map_err(SetRuleError::RemoteAddresses)
+                }?;
             }
             if let Some(ref icmp_types_and_codes) = rule.icmp_types_and_codes {
-                fw_rule
-                    .SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
-                    .map_err(SetRuleError::IcmpTypesAndCodes)?;
+                unsafe {
+                    fw_rule
+                        .SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
+                        .map_err(SetRuleError::IcmpTypesAndCodes)
+                }?;
             }
             if let Some(edge_traversal) = rule.edge_traversal {
-                fw_rule
-                    .SetEdgeTraversal(edge_traversal.into())
-                    .map_err(SetRuleError::EdgeTraversal)?;
+                unsafe {
+                    fw_rule
+                        .SetEdgeTraversal(edge_traversal.into())
+                        .map_err(SetRuleError::EdgeTraversal)
+                }?;
             }
             if let Some(ref grouping) = rule.grouping {
-                fw_rule
-                    .SetGrouping(&BSTR::from(grouping))
-                    .map_err(SetRuleError::Grouping)?;
+                unsafe {
+                    fw_rule
+                        .SetGrouping(&BSTR::from(grouping))
+                        .map_err(SetRuleError::Grouping)
+                }?;
             }
             if let Some(ref interface) = rule.interfaces {
-                fw_rule
-                    .SetInterfaces(&hashset_to_variant(interface)?)
-                    .map_err(SetRuleError::Interfaces)?;
+                unsafe {
+                    fw_rule
+                        .SetInterfaces(&hashset_to_variant(interface)?)
+                        .map_err(SetRuleError::Interfaces)
+                }?;
             }
             if let Some(ref interface_types) = rule.interface_types {
-                fw_rule
-                    .SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
-                    .map_err(SetRuleError::InterfaceTypes)?;
+                unsafe {
+                    fw_rule
+                        .SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
+                        .map_err(SetRuleError::InterfaceType)
+                }?;
             }
             if let Some(profiles) = rule.profiles {
-                fw_rule
-                    .SetProfiles(profiles.into())
-                    .map_err(SetRuleError::Profiles)?;
+                unsafe {
+                    fw_rule
+                        .SetProfiles(profiles.into())
+                        .map_err(SetRuleError::Profiles)
+                }?;
             }
 
             Ok(fw_rule)
@@ -565,34 +295,34 @@ impl TryFrom<&WindowsFirewallRule> for INetFwRule {
 ///
 /// # Example
 /// ```rust
-/// use windows_firewall::{WindowsFirewallRuleSettings, DirectionFirewallWindows, ActionFirewallWindows, ProtocolFirewallWindows};
+/// use windows_firewall::{FirewallRuleUpdate, Direction, Action, Protocol};
 ///
-/// let rule_settings = WindowsFirewallRuleSettings::builder()
+/// let rule_settings = FirewallRuleUpdate::builder()
 ///     .name("Allow HTTP")
-///     .action(ActionFirewallWindows::Allow)
-///     .direction(DirectionFirewallWindows::In)
+///     .action(Action::Allow)
+///     .direction(Direction::In)
 ///     .enabled(true)
 ///     .description("Allow inbound HTTP traffic")
-///     .protocol(ProtocolFirewallWindows::Tcp)
+///     .protocol(Protocol::Tcp)
 ///     .local_ports([80])
 ///     .build();
 ///
 /// println!("Firewall Rule Settings: {:?}", rule_settings);
 /// ```
 #[derive(Debug, Clone, TypedBuilder)]
-pub struct WindowsFirewallRuleSettings {
+pub struct FirewallRuleUpdate {
     /// The name of the firewall rule. Must not contain the "|" character and cannot be "all".
     #[builder(default, setter(strip_option, into))]
     pub(crate) name: Option<String>,
     /// The direction of the firewall rule (inbound or outbound).
     #[builder(default, setter(strip_option, into))]
-    pub(crate) direction: Option<DirectionFirewallWindows>,
+    pub(crate) direction: Option<Direction>,
     /// Indicates whether the firewall rule is enabled.
     #[builder(default, setter(strip_option, into))]
     pub(crate) enabled: Option<bool>,
     /// The action to be taken by the firewall rule (allow or block).
     #[builder(default, setter(strip_option, into))]
-    pub(crate) action: Option<ActionFirewallWindows>,
+    pub(crate) action: Option<Action>,
     /// A brief description of the firewall rule. Must not contain the "|" character.
     #[builder(default, setter(strip_option, into))]
     pub(crate) description: Option<String>,
@@ -604,19 +334,19 @@ pub struct WindowsFirewallRuleSettings {
     pub(crate) service_name: Option<String>,
     /// The IP protocol used by the rule (e.g., TCP, UDP).
     #[builder(default, setter(strip_option, into))]
-    pub(crate) protocol: Option<ProtocolFirewallWindows>,
+    pub(crate) protocol: Option<Protocol>,
     /// A set of local ports this rule applies to. For example, specify ports like 80 or 443.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
-    pub(crate) local_ports: Option<HashSet<FwPort>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Port>>| Some(into_hashset(items))))]
+    pub(crate) local_ports: Option<HashSet<Port>>,
     /// A set of remote ports this rule applies to.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwPort>>| Some(into_hashset(items))))]
-    pub(crate) remote_ports: Option<HashSet<FwPort>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Port>>| Some(into_hashset(items))))]
+    pub(crate) remote_ports: Option<HashSet<Port>>,
     /// A set of local addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
-    pub(crate) local_addresses: Option<HashSet<FwAddress>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Address>>| Some(into_hashset(items))))]
+    pub(crate) local_addresses: Option<HashSet<Address>>,
     /// A set of remote addresses associated with the firewall rule. IPv4 and IPv6 addresses are supported.
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<FwAddress>>| Some(into_hashset(items))))]
-    pub(crate) remote_addresses: Option<HashSet<FwAddress>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<Address>>| Some(into_hashset(items))))]
+    pub(crate) remote_addresses: Option<HashSet<Address>>,
     /// The ICMP types and codes associated with the rule, relevant for ICMP protocol rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) icmp_types_and_codes: Option<String>,
@@ -624,21 +354,21 @@ pub struct WindowsFirewallRuleSettings {
     #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<String>>| Some(into_hashset(items))))]
     pub(crate) interfaces: Option<HashSet<String>>,
     /// A set of interface types associated with the firewall rule (e.g., `Wireless`, `Lan`, `RemoteAccess`, or `All`).
-    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceTypes>>| Some(into_hashset(items))))]
-    pub(crate) interface_types: Option<HashSet<InterfaceTypes>>,
+    #[builder(default, setter(transform = |items: impl IntoIterator<Item = impl Into<InterfaceType>>| Some(into_hashset(items))))]
+    pub(crate) interface_types: Option<HashSet<InterfaceType>>,
     /// The grouping of the rule, used for organizing rules.
     #[builder(default, setter(strip_option, into))]
     pub(crate) grouping: Option<String>,
     /// The profiles associated with the firewall rule (e.g., Domain, Private, Public).
     #[builder(default, setter(strip_option, into))]
-    pub(crate) profiles: Option<ProfileFirewallWindows>,
+    pub(crate) profiles: Option<Profile>,
     /// Indicates whether edge traversal is allowed by the rule.
     #[builder(default, setter(strip_option, into))]
     pub(crate) edge_traversal: Option<bool>,
 }
 
-impl From<WindowsFirewallRule> for WindowsFirewallRuleSettings {
-    fn from(rule: WindowsFirewallRule) -> Self {
+impl From<FirewallRule> for FirewallRuleUpdate {
+    fn from(rule: FirewallRule) -> Self {
         Self {
             name: Some(rule.name),
             direction: Some(rule.direction),
@@ -671,24 +401,24 @@ mod tests {
 
     #[test]
     fn test_windows_firewall_rule_setters() {
-        let mut rule = WindowsFirewallRule::builder()
+        let mut rule = FirewallRule::builder()
             .name("test")
-            .action(ActionFirewallWindows::Block)
-            .direction(DirectionFirewallWindows::Out)
+            .action(Action::Block)
+            .direction(Direction::Out)
             .enabled(false)
             .build();
 
         rule.set_name("new_name".to_string());
         assert_eq!(rule.name(), "new_name");
 
-        rule.set_direction(DirectionFirewallWindows::In);
-        assert_eq!(rule.direction(), &DirectionFirewallWindows::In);
+        rule.set_direction(Direction::In);
+        assert_eq!(rule.direction(), &Direction::In);
 
         rule.set_enabled(true);
         assert!(rule.enabled());
 
-        rule.set_action(ActionFirewallWindows::Allow);
-        assert_eq!(rule.action(), &ActionFirewallWindows::Allow);
+        rule.set_action(Action::Allow);
+        assert_eq!(rule.action(), &Action::Allow);
 
         let desc = Some("desc".to_string());
         rule.set_description(desc);
@@ -708,8 +438,8 @@ mod tests {
         rule.set_service_name(None);
         assert_eq!(*rule.service_name(), None);
 
-        rule.set_protocol(Some(ProtocolFirewallWindows::Tcp));
-        assert_eq!(*rule.protocol(), Some(ProtocolFirewallWindows::Tcp));
+        rule.set_protocol(Some(Protocol::Tcp));
+        assert_eq!(*rule.protocol(), Some(Protocol::Tcp));
         rule.set_protocol(None);
         assert_eq!(*rule.protocol(), None);
 
@@ -755,7 +485,7 @@ mod tests {
         assert_eq!(*rule.interfaces(), None);
 
         let mut iftypes = HashSet::new();
-        iftypes.insert(InterfaceTypes::Lan);
+        iftypes.insert(InterfaceType::Lan);
         rule.set_interface_types(Some(iftypes.clone()));
         assert_eq!(*rule.interface_types(), Some(iftypes));
         rule.set_interface_types(None);
@@ -767,8 +497,8 @@ mod tests {
         rule.set_grouping(None);
         assert_eq!(*rule.grouping(), None);
 
-        rule.set_profiles(Some(ProfileFirewallWindows::Private));
-        assert_eq!(*rule.profiles(), Some(ProfileFirewallWindows::Private));
+        rule.set_profiles(Some(Profile::Private));
+        assert_eq!(*rule.profiles(), Some(Profile::Private));
         rule.set_profiles(None);
         assert_eq!(*rule.profiles(), None);
 

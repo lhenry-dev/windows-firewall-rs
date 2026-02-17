@@ -1,4 +1,4 @@
-use windows_firewall::{WindowsFirewallError, WindowsFirewallRule};
+use windows_firewall::{FirewallRule, WindowsFirewallError};
 
 #[must_use]
 pub struct AutoRemoveRuleResult {
@@ -7,7 +7,7 @@ pub struct AutoRemoveRuleResult {
 }
 
 impl AutoRemoveFirewallRule {
-    fn make_result(rule: &WindowsFirewallRule, should_remove: bool) -> AutoRemoveRuleResult {
+    fn make_result(rule: &FirewallRule, should_remove: bool) -> AutoRemoveRuleResult {
         assert!(rule.exists().unwrap(), "Rule should exist after operation");
 
         AutoRemoveRuleResult {
@@ -21,7 +21,7 @@ impl AutoRemoveFirewallRule {
 }
 
 pub struct AutoRemoveFirewallRule {
-    pub rule: WindowsFirewallRule,
+    pub rule: FirewallRule,
     should_remove: bool,
 }
 
@@ -36,14 +36,14 @@ impl Drop for AutoRemoveFirewallRule {
 }
 
 impl AutoRemoveFirewallRule {
-    pub fn add(rule: &WindowsFirewallRule) -> Result<AutoRemoveRuleResult, WindowsFirewallError> {
+    pub fn add(rule: &FirewallRule) -> Result<AutoRemoveRuleResult, WindowsFirewallError> {
         rule.add()?;
 
         Ok(Self::make_result(rule, true))
     }
 
     pub fn add_if_not_exists(
-        rule: &WindowsFirewallRule,
+        rule: &FirewallRule,
     ) -> Result<AutoRemoveRuleResult, WindowsFirewallError> {
         let added = rule.add_if_not_exists()?;
 
@@ -51,7 +51,7 @@ impl AutoRemoveFirewallRule {
     }
 
     pub fn add_or_update(
-        rule: &WindowsFirewallRule,
+        rule: &FirewallRule,
     ) -> Result<AutoRemoveRuleResult, WindowsFirewallError> {
         let changed = rule.add_or_update()?;
 

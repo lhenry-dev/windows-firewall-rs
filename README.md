@@ -45,18 +45,18 @@ windows_firewall = "0.1.0"
 
 ```rust
 use windows_firewall::{
-    add_rule, remove_rule, rule_exists, update_rule, WindowsFirewallRule, WindowsFirewallRuleSettings,
-    ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows
+    add_rule, remove_rule, rule_exists, update_rule, FirewallRule, FirewallRuleUpdate,
+    Action, Direction, Protocol
 };
 
 // Create a new rule
-let mut rule = WindowsFirewallRule::builder()
+let mut rule = FirewallRule::builder()
     .name("TestHTTPRule")
-    .action(ActionFirewallWindows::Allow)
-    .direction(DirectionFirewallWindows::In)
+    .action(Action::Allow)
+    .direction(Direction::In)
     .enabled(true)
     .description("Test HTTP rule")
-    .protocol(ProtocolFirewallWindows::Tcp)
+    .protocol(Protocol::Tcp)
     .local_ports([80])
     .build();
 
@@ -72,7 +72,7 @@ match rule_exists("TestHTTPRule") {
     Err(e) => eprintln!("Failed to check rule: {}", e),
 };
 
-let updated_settings = WindowsFirewallRuleSettings::builder()
+let updated_settings = FirewallRuleUpdate::builder()
     .enabled(false)
     .description("Updated test HTTP rule")
     .build();
@@ -94,18 +94,18 @@ match remove_rule("TestHTTPRule") {
 
 ```rust
 use windows_firewall::{
-    WindowsFirewallRule, WindowsFirewallRuleSettings,
-    ActionFirewallWindows, DirectionFirewallWindows, ProtocolFirewallWindows
+    FirewallRule, FirewallRuleUpdate,
+    Action, Direction, Protocol
 };
 
 // Create a new firewall rule
-let mut rule = WindowsFirewallRule::builder()
+let mut rule = FirewallRule::builder()
     .name("TestDNSServerRule")
-    .action(ActionFirewallWindows::Allow)
-    .direction(DirectionFirewallWindows::In)
+    .action(Action::Allow)
+    .direction(Direction::In)
     .enabled(true)
     .description("Test DNS Server rule")
-    .protocol(ProtocolFirewallWindows::Udp)
+    .protocol(Protocol::Udp)
     .local_ports([53])
     .build();
 
@@ -121,7 +121,7 @@ match rule.exists() {
     Err(e) => eprintln!("Failed to check rule: {}", e),
 };
 
-let updated_settings = WindowsFirewallRuleSettings::builder()
+let updated_settings = FirewallRuleUpdate::builder()
     .enabled(false)
     .description("Updated DNS Server rule")
     .build();
@@ -142,9 +142,9 @@ match rule.remove() {
 ### Checking Firewall Status
 
 ```rust
-use windows_firewall::{get_firewall_state, ProfileFirewallWindows};
+use windows_firewall::{get_firewall_state, Profile};
 
-match get_firewall_state(ProfileFirewallWindows::Public) {
+match get_firewall_state(Profile::Public) {
     Ok(enabled) => println!("Firewall is {}", if enabled { "enabled" } else { "disabled" }),
     Err(e) => eprintln!("Failed to get firewall state: {}", e),
 }

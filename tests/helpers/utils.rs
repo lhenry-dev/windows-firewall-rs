@@ -1,6 +1,6 @@
-use windows_firewall::WindowsFirewallRule;
+use windows_firewall::FirewallRule;
 
-pub fn assert_firewall_rule_eq(actual: &WindowsFirewallRule, expected: &WindowsFirewallRule) {
+pub fn assert_firewall_rule_eq(actual: &FirewallRule, expected: &FirewallRule) {
     assert_eq!(actual.name(), expected.name(), "Rule name mismatch");
     assert_eq!(
         actual.direction(),
