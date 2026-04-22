@@ -24,7 +24,7 @@ impl FromStr for InterfaceType {
             "Lan" => Ok(Self::Lan),
             "RemoteAccess" => Ok(Self::RemoteAccess),
             "All" => Ok(Self::All),
-            _ => Err(InvalidRuleProperty::InterfaceType),
+            _ => Err(InvalidRuleProperty::InterfaceType(s.to_string())),
         }
     }
 }
@@ -53,6 +53,6 @@ mod tests {
 
         let result = InterfaceType::from_str(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleProperty::InterfaceType)));
+        assert!(matches!(result, Err(InvalidRuleProperty::InterfaceType(_))));
     }
 }

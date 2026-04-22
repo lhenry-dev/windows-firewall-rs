@@ -24,7 +24,7 @@ impl TryFrom<NET_FW_RULE_DIRECTION> for Direction {
             NET_FW_RULE_DIR_IN => Ok(Self::In),
             NET_FW_RULE_DIR_OUT => Ok(Self::Out),
             NET_FW_RULE_DIR_MAX => Ok(Self::Max),
-            _ => Err(InvalidRuleProperty::NetFwRuleDirection),
+            _ => Err(InvalidRuleProperty::NetFwRuleDirection(value.0)),
         }
     }
 }
@@ -54,7 +54,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(InvalidRuleProperty::NetFwRuleDirection)
+            Err(InvalidRuleProperty::NetFwRuleDirection(999))
         ));
     }
 }

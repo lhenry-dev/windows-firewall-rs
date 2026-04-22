@@ -46,7 +46,7 @@ impl TryFrom<i32> for Profile {
             x if x == NET_FW_PROFILE_STANDARD.0 => Ok(Self::LegacyStandard),
             x if x == NET_FW_PROFILE_CURRENT.0 => Ok(Self::LegacyCurrent),
             x if x == NET_FW_PROFILE_TYPE_MAX.0 => Ok(Self::LegacyMax),
-            _ => Err(InvalidRuleProperty::NetFwProfile),
+            _ => Err(InvalidRuleProperty::NetFwProfile(value)),
         }
     }
 }
@@ -78,6 +78,9 @@ mod tests {
 
         let result = Profile::try_from(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleProperty::NetFwProfile)));
+        assert!(matches!(
+            result,
+            Err(InvalidRuleProperty::NetFwProfile(999))
+        ));
     }
 }

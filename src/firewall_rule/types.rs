@@ -23,20 +23,20 @@ pub mod protocol;
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum InvalidRuleProperty {
     /// Indicates that an invalid value was used for `NET_FW_ACTION`.
-    #[error("Invalid NET_FW_ACTION value")]
-    NetFwAction,
+    #[error("Invalid NET_FW_ACTION value: {0}")]
+    NetFwAction(i32),
     /// Indicates that an invalid value was used for `NET_FW_PROFILE`.
-    #[error("Invalid NET_FW_PROFILE value")]
-    NetFwProfile,
+    #[error("Invalid NET_FW_PROFILE value: {0}")]
+    NetFwProfile(i32),
     /// Indicates that an invalid value was used for `NET_FW_RULE_DIRECTION`.
-    #[error("Invalid NET_FW_RULE_DIRECTION value")]
-    NetFwRuleDirection,
+    #[error("Invalid NET_FW_RULE_DIRECTION value: {0}")]
+    NetFwRuleDirection(i32),
     /// Indicates that an invalid value was used for `NET_FW_IP_PROTOCOL`.
-    #[error("Invalid NET_FW_IP_PROTOCOL value")]
-    NetFwIpProtocol,
+    #[error("Invalid NET_FW_IP_PROTOCOL value: {0}")]
+    NetFwIpProtocol(i32),
     /// Indicates that an invalid value was used for `InterfaceType`.
-    #[error("Invalid InterfaceType value")]
-    InterfaceType,
+    #[error("Invalid InterfaceType value: {0}")]
+    InterfaceType(String),
     /// Indicates that an invalid value was used for `Address`.
     #[error(transparent)]
     Address(#[from] AddressParseError),

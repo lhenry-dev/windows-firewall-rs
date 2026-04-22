@@ -63,7 +63,7 @@ impl TryFrom<i32> for Protocol {
             51 => Ok(Self::Ah),
             132 => Ok(Self::Sctp),
             x if x == NET_FW_IP_PROTOCOL_ANY.0 => Ok(Self::Any),
-            _ => Err(InvalidRuleProperty::NetFwIpProtocol),
+            _ => Err(InvalidRuleProperty::NetFwIpProtocol(value)),
         }
     }
 }
@@ -98,6 +98,9 @@ mod tests {
 
         let result = Protocol::try_from(invalid_value);
 
-        assert!(matches!(result, Err(InvalidRuleProperty::NetFwIpProtocol)));
+        assert!(matches!(
+            result,
+            Err(InvalidRuleProperty::NetFwIpProtocol(999))
+        ));
     }
 }

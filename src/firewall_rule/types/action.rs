@@ -24,7 +24,7 @@ impl TryFrom<NET_FW_ACTION> for Action {
             NET_FW_ACTION_BLOCK => Ok(Self::Block),
             NET_FW_ACTION_ALLOW => Ok(Self::Allow),
             NET_FW_ACTION_MAX => Ok(Self::Max),
-            _ => Err(InvalidRuleProperty::NetFwAction),
+            _ => Err(InvalidRuleProperty::NetFwAction(action.0)),
         }
     }
 }
@@ -52,6 +52,6 @@ mod tests {
 
         let result = Action::try_from(NET_FW_ACTION(invalid_value));
 
-        assert!(matches!(result, Err(InvalidRuleProperty::NetFwAction)));
+        assert!(matches!(result, Err(InvalidRuleProperty::NetFwAction(999))));
     }
 }

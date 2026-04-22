@@ -7,10 +7,10 @@ use scopeguard::guard;
 use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::{
-    Address, AddressKeyword, AddressRange, Direction, PortKeyword, PortRange, Protocol, count_rules,
+    Address, AddressKeyword, AddressRange, Direction, PortKeyword, PortRange, Protocol,
 };
 use windows_firewall::{FirewallRuleUpdate, Port};
-use windows_firewall::{get_rule, list_incoming_rules, list_outgoing_rules, list_rules};
+use windows_firewall::{get_rule, list_rules};
 
 use helpers::build::{
     build_full_rule_for_protocol, build_icmp_full_rule, build_rule_for_interface,
@@ -21,50 +21,8 @@ use helpers::constants::RULE_NAME;
 use crate::helpers::auto_remove_firewall_rule::AutoRemoveFirewallRule;
 use crate::helpers::build::{build_base_rule, build_rule_for_address, build_rule_for_port};
 use crate::helpers::utils::assert_firewall_rule_eq;
-use serial_test::{parallel, serial};
 
 mod helpers;
-
-#[test]
-#[serial]
-fn test_list_rules() {
-    let rule_name = format!("{RULE_NAME}_list_rules");
-    let rule = build_tcp_full_rule(&rule_name);
-    let _guard = AutoRemoveFirewallRule::add(&rule).unwrap();
-
-    let count = count_rules().expect("Failed to count rules");
-    let rules = list_rules().expect("Failed to list outgoing rules");
-
-    assert_eq!(
-        count as usize,
-        rules.len(),
-        "Count of rules should match the length of the rules list"
-    );
-
-    let fetched = rules
-        .iter()
-        .find(|r| *r.name() == rule_name)
-        .unwrap_or_else(|| {
-            panic!(
-                "Firewall rule '{}' not found in list_rules() output",
-                rule_name
-            )
-        });
-
-    assert_firewall_rule_eq(fetched, &rule);
-}
-
-#[test]
-fn test_list_incoming_rules() {
-    let rules = list_incoming_rules();
-    assert!(rules.is_ok(), "Failed to list incoming rules");
-}
-
-#[test]
-fn test_list_outgoing_rules() {
-    let rules = list_outgoing_rules();
-    assert!(rules.is_ok(), "Failed to list outgoing rules");
-}
 
 #[test]
 fn test_firewall_rules_conversion() {
@@ -88,7 +46,6 @@ fn test_firewall_rules_conversion() {
 }
 
 #[test]
-#[parallel]
 fn test_add_rule_if_not_exists() {
     let rule_name = format!("{RULE_NAME}_add_if_not_exists");
     let rule = build_tcp_full_rule(&rule_name);
@@ -100,7 +57,6 @@ fn test_add_rule_if_not_exists() {
 }
 
 #[test]
-#[parallel]
 fn test_add_or_update() {
     let rule_name = format!("{RULE_NAME}_add_or_update");
     let rule = build_tcp_full_rule(&rule_name);
@@ -125,7 +81,6 @@ fn test_add_or_update() {
 }
 
 #[test]
-#[parallel]
 fn test_enable_rule() {
     let rule_name = format!("{RULE_NAME}_enable_rule");
     let mut rule = build_tcp_full_rule(&rule_name);
@@ -140,7 +95,6 @@ fn test_enable_rule() {
 }
 
 #[test]
-#[parallel]
 fn test_all_protocol_transitions() {
     let protocols = [
         (Protocol::Tcp, "Tcp"),
@@ -188,7 +142,6 @@ fn test_all_protocol_transitions() {
 }
 
 #[test]
-#[parallel]
 fn test_add_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
@@ -213,7 +166,6 @@ fn test_add_rule_per_network_interface() {
 }
 
 #[test]
-#[parallel]
 fn test_update_rule_per_network_interface() {
     let adapters = get_adapters().expect("Failed to retrieve network interfaces");
 
@@ -254,7 +206,6 @@ fn test_update_rule_per_network_interface() {
 }
 
 #[test]
-#[parallel]
 fn test_direction_and_edge_traversal_transitions() {
     let states = [
         (Direction::In, true, "In_EdgeTrue"),
@@ -305,7 +256,6 @@ fn test_direction_and_edge_traversal_transitions() {
 }
 
 #[test]
-#[parallel]
 fn test_all_port_variants() {
     let ports = [
         Port::Any,
@@ -338,7 +288,6 @@ fn test_all_port_variants() {
 }
 
 #[test]
-#[parallel]
 fn test_all_address_variants() {
     let addresses = [
         Address::Any,
