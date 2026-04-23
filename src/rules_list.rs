@@ -72,7 +72,7 @@ pub fn list_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
         let mut pceltfetch: u32 = 0;
 
         for _ in 0..rules_count {
-            let fetched = unsafe { enumerator.Next(&mut variants, &mut pceltfetch) };
+            let fetched = unsafe { enumerator.Next(&mut variants, &raw mut pceltfetch) };
 
             let (true, Some(variant)) = (fetched.is_ok(), variants.first()) else {
                 warn!("Error while fetching rules");

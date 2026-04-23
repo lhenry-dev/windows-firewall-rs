@@ -154,7 +154,7 @@ impl FirewallRule {
         update_rule(&self.name, settings)?;
 
         if let Some(name) = &settings.name {
-            self.name = name.clone();
+            self.name.clone_from(name);
         }
         if let Some(direction) = &settings.direction {
             self.direction = *direction;
