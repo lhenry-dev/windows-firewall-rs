@@ -4,7 +4,6 @@ use std::net::{IpAddr, Ipv4Addr};
 use ipconfig::get_adapters;
 use ipnet::IpNet;
 use scopeguard::guard;
-use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::{
     Address, AddressKeyword, AddressRange, Direction, PortKeyword, PortRange, Protocol,
@@ -36,7 +35,7 @@ fn test_firewall_rules_conversion() {
 
     let inetfw_rules = firewall_rules
         .iter()
-        .map(|rule| INetFwRule::try_from(rule).expect("Failed to convert to INetFwRule"));
+        .map(|rule| rule.to_com_rule().expect("Failed to convert to INetFwRule"));
 
     assert_eq!(
         firewall_rules.len(),

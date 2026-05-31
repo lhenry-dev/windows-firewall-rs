@@ -179,7 +179,7 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 pub fn add_rule(rule: &FirewallRule) -> Result<(), WindowsFirewallError> {
     with_policy(|fw_policy| {
         let fw_rules: INetFwRules = unsafe { fw_policy.Rules() }?;
-        let new_rule: INetFwRule = rule.try_into()?;
+        let new_rule: INetFwRule = rule.to_com_rule()?;
 
         unsafe { fw_rules.Add(&new_rule) }?;
 
@@ -223,7 +223,7 @@ pub fn add_rule_if_not_exists(rule: &FirewallRule) -> Result<bool, WindowsFirewa
             return Ok(false);
         }
 
-        let new_rule: INetFwRule = rule.try_into()?;
+        let new_rule: INetFwRule = rule.to_com_rule()?;
 
         unsafe { fw_rules.Add(&new_rule) }?;
 
@@ -271,7 +271,7 @@ pub fn add_rule_or_update(rule: &FirewallRule) -> Result<bool, WindowsFirewallEr
             return Ok(false);
         }
 
-        let new_rule: INetFwRule = rule.try_into()?;
+        let new_rule: INetFwRule = rule.to_com_rule()?;
         unsafe { fw_rules.Add(&new_rule) }?;
 
         Ok(true)

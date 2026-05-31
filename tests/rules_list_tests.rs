@@ -1,5 +1,4 @@
 use scopeguard::guard;
-use windows::Win32::NetworkManagement::WindowsFirewall::INetFwRule;
 use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 use windows_firewall::count_rules;
 use windows_firewall::{list_incoming_rules, list_outgoing_rules, list_rules};
@@ -64,7 +63,7 @@ fn test_firewall_rules_conversion() {
 
     let inetfw_rules = firewall_rules
         .iter()
-        .map(|rule| INetFwRule::try_from(rule).expect("Failed to convert to INetFwRule"));
+        .map(|rule| rule.to_com_rule().expect("Failed to convert to INetFwRule"));
 
     assert_eq!(
         firewall_rules.len(),

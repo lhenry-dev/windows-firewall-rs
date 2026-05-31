@@ -162,123 +162,146 @@ impl TryFrom<INetFwRule> for FirewallRule {
     }
 }
 
-impl TryFrom<&FirewallRule> for INetFwRule {
-    type Error = WindowsFirewallError;
-
-    fn try_from(rule: &FirewallRule) -> Result<Self, WindowsFirewallError> {
+impl FirewallRule {
+    /// Converts this [`FirewallRule`] into a Windows Firewall COM rule (`INetFwRule`).
+    ///
+    /// This function creates a new `INetFwRule` COM object and populates it with
+    /// the properties defined in this [`FirewallRule`]. All mandatory fields are
+    /// applied, and optional fields are configured when present.
+    ///
+    /// The resulting COM object can be used directly with the Windows Firewall API,
+    /// for example when adding a new rule through an [`INetFwRule`] collection.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`Result<INetFwRule, WindowsFirewallError>`]. On success,
+    /// the fully initialized COM rule is returned. If the COM object cannot be
+    /// created or one of its properties cannot be configured, a
+    /// [`WindowsFirewallError`] is returned.
+    ///
+    /// # Errors
+    ///
+    /// This function may return a [`WindowsFirewallError`] if there is a failure during:
+    /// - COM object creation.
+    /// - Setting the rule name.
+    /// - Setting the rule direction.
+    /// - Setting the enabled state.
+    /// - Setting the action.
+    /// - Setting any optional property (description, ports, addresses, profiles, etc.).
+    pub fn to_com_rule(&self) -> Result<INetFwRule, WindowsFirewallError> {
         with_rule(|fw_rule| {
             unsafe {
                 fw_rule
-                    .SetName(&BSTR::from(&rule.name))
+                    .SetName(&BSTR::from(&self.name))
                     .map_err(SetRuleError::Name)
             }?;
             unsafe {
                 fw_rule
-                    .SetDirection(rule.direction.into())
+                    .SetDirection(self.direction.into())
                     .map_err(SetRuleError::Direction)
             }?;
             unsafe {
                 fw_rule
-                    .SetEnabled(rule.enabled.into())
+                    .SetEnabled(self.enabled.into())
                     .map_err(SetRuleError::Enabled)
             }?;
             unsafe {
                 fw_rule
-                    .SetAction(rule.action.into())
+                    .SetAction(self.action.into())
                     .map_err(SetRuleError::Action)
             }?;
-            if let Some(ref description) = rule.description {
+            if let Some(ref description) = self.description {
                 unsafe {
                     fw_rule
                         .SetDescription(&BSTR::from(description))
                         .map_err(SetRuleError::Description)
                 }?;
             }
-            if let Some(ref app_name) = rule.application_name {
+            if let Some(ref app_name) = self.application_name {
                 unsafe {
                     fw_rule
                         .SetApplicationName(&BSTR::from(app_name))
                         .map_err(SetRuleError::ApplicationName)
                 }?;
             }
-            if let Some(ref service_name) = rule.service_name {
+            if let Some(ref service_name) = self.service_name {
                 unsafe {
                     fw_rule
                         .SetServiceName(&BSTR::from(service_name))
                         .map_err(SetRuleError::ServiceName)
                 }?;
             }
-            if let Some(protocol) = rule.protocol {
+            if let Some(protocol) = self.protocol {
                 unsafe {
                     fw_rule
                         .SetProtocol(protocol.into())
                         .map_err(SetRuleError::Protocol)
                 }?;
             }
-            if let Some(ref local_ports) = rule.local_ports {
+            if let Some(ref local_ports) = self.local_ports {
                 unsafe {
                     fw_rule
                         .SetLocalPorts(&hashset_to_bstr(Some(local_ports)))
                         .map_err(SetRuleError::LocalPorts)
                 }?;
             }
-            if let Some(ref remote_ports) = rule.remote_ports {
+            if let Some(ref remote_ports) = self.remote_ports {
                 unsafe {
                     fw_rule
                         .SetRemotePorts(&hashset_to_bstr(Some(remote_ports)))
                         .map_err(SetRuleError::RemotePorts)
                 }?;
             }
-            if let Some(ref local_addresses) = rule.local_addresses {
+            if let Some(ref local_addresses) = self.local_addresses {
                 unsafe {
                     fw_rule
                         .SetLocalAddresses(&hashset_to_bstr(Some(local_addresses)))
                         .map_err(SetRuleError::LocalAddresses)
                 }?;
             }
-            if let Some(ref remote_addresses) = rule.remote_addresses {
+            if let Some(ref remote_addresses) = self.remote_addresses {
                 unsafe {
                     fw_rule
                         .SetRemoteAddresses(&hashset_to_bstr(Some(remote_addresses)))
                         .map_err(SetRuleError::RemoteAddresses)
                 }?;
             }
-            if let Some(ref icmp_types_and_codes) = rule.icmp_types_and_codes {
+            if let Some(ref icmp_types_and_codes) = self.icmp_types_and_codes {
                 unsafe {
                     fw_rule
                         .SetIcmpTypesAndCodes(&BSTR::from(icmp_types_and_codes))
                         .map_err(SetRuleError::IcmpTypesAndCodes)
                 }?;
             }
-            if let Some(edge_traversal) = rule.edge_traversal {
+            if let Some(edge_traversal) = self.edge_traversal {
                 unsafe {
                     fw_rule
                         .SetEdgeTraversal(edge_traversal.into())
                         .map_err(SetRuleError::EdgeTraversal)
                 }?;
             }
-            if let Some(ref grouping) = rule.grouping {
+            if let Some(ref grouping) = self.grouping {
                 unsafe {
                     fw_rule
                         .SetGrouping(&BSTR::from(grouping))
                         .map_err(SetRuleError::Grouping)
                 }?;
             }
-            if let Some(ref interface) = rule.interfaces {
+            if let Some(ref interface) = self.interfaces {
                 unsafe {
                     fw_rule
                         .SetInterfaces(&hashset_to_variant(interface)?)
                         .map_err(SetRuleError::Interfaces)
                 }?;
             }
-            if let Some(ref interface_types) = rule.interface_types {
+            if let Some(ref interface_types) = self.interface_types {
                 unsafe {
                     fw_rule
                         .SetInterfaceTypes(&hashset_to_bstr(Some(interface_types)))
                         .map_err(SetRuleError::InterfaceType)
                 }?;
             }
-            if let Some(profiles) = rule.profiles {
+            if let Some(profiles) = self.profiles {
                 unsafe {
                     fw_rule
                         .SetProfiles(profiles.into())
