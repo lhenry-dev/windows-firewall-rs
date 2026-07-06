@@ -5,6 +5,8 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
 use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the possible firewall actions in Windows
+///
+/// Mirrors the [`NET_FW_ACTION`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_action) enumeration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
     /// Block network traffic

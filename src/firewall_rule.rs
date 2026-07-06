@@ -133,6 +133,8 @@ pub struct FirewallRule {
     edge_traversal: Option<bool>,
 }
 
+/// Converts a Windows Firewall COM rule (see [`INetFwRule`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrule))
+/// into a [`FirewallRule`].
 impl TryFrom<INetFwRule> for FirewallRule {
     type Error = WindowsFirewallError;
 
@@ -171,6 +173,8 @@ impl FirewallRule {
     ///
     /// The resulting COM object can be used directly with the Windows Firewall API,
     /// for example when adding a new rule through an [`INetFwRule`] collection.
+    ///
+    /// See the [`INetFwRule`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrule) interface documentation.
     ///
     /// # Returns
     ///

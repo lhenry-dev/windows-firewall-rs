@@ -15,6 +15,8 @@ use crate::utils::with_policy;
 /// This function initializes COM, creates a firewall policy object, and fetches
 /// the total count of firewall rules.
 ///
+/// See [`INetFwRules::get_Count`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-get_count).
+///
 /// # Returns
 ///
 /// Returns a [`Result<i32, WindowsFirewallError>`](WindowsFirewallError) with the
@@ -43,6 +45,9 @@ pub fn count_rules() -> Result<i32, WindowsFirewallError> {
 /// This function initializes COM, creates a firewall policy object, and enumerates through
 /// all the firewall rules, converting them into [`FirewallRule`] structs and returning
 /// them as a vector.
+///
+/// See [`INetFwRules::get__NewEnum`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-get__newenum)
+/// and the [`IEnumVARIANT`](https://learn.microsoft.com/en-us/windows/win32/api/oaidl/nn-oaidl-ienumvariant) interface used to iterate the rule collection.
 ///
 /// # Returns
 ///

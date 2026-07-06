@@ -5,6 +5,9 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
 use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the possible firewall protocols in Windows
+///
+/// Mirrors the [`NET_FW_IP_PROTOCOL`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_ip_protocol) enumeration
+/// (extended with the IANA protocol numbers accepted by [`INetFwRule::get_Protocol`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_protocol)).
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Protocol {
     /// TCP protocol

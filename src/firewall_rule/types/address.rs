@@ -106,6 +106,9 @@ impl AddressRange {
 }
 
 /// Firewall address tokenS
+///
+/// See [`INetFwRule::get_LocalAddresses`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_localaddresses)
+/// and [`INetFwRule::get_RemoteAddresses`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_remoteaddresses).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Address {
     /// "*" — any address

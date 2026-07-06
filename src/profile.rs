@@ -10,6 +10,9 @@ use crate::utils::with_policy;
 /// This function initializes COM, creates a firewall policy object, and retrieves the current
 /// active firewall profile, returning it as a [`Profile`] object.
 ///
+/// See [`INetFwPolicy2::get_CurrentProfileTypes`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwpolicy2-get_currentprofiletypes)
+/// and the [`NET_FW_PROFILE_TYPE2`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_profile_type2) enumeration.
+///
 /// # Returns
 ///
 /// This function returns a [`Result<Profile, WindowsFirewallError>`](Profile). If the active profile
@@ -38,6 +41,8 @@ pub fn get_active_profile() -> Result<Profile, WindowsFirewallError> {
 /// This function initializes COM, creates a firewall policy object, and checks if the firewall
 /// is enabled or disabled for the given profile. It returns `true` if the firewall is enabled,
 /// and `false` otherwise.
+///
+/// See [`INetFwPolicy2::get_FirewallEnabled`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwpolicy2-get_firewallenabled).
 ///
 /// # Arguments
 ///
@@ -73,6 +78,8 @@ pub fn get_firewall_state(profile: Profile) -> Result<bool, WindowsFirewallError
 ///
 /// This function initializes COM, creates a firewall policy object, and enables or disables the firewall
 /// for the given profile based on the provided state (`true` to enable, `false` to disable).
+///
+/// See [`INetFwPolicy2::put_FirewallEnabled`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwpolicy2-put_firewallenabled).
 ///
 /// # Arguments
 ///

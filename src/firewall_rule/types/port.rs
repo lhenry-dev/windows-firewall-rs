@@ -103,6 +103,9 @@ impl PortRange {
 }
 
 /// Firewall port token
+///
+/// See [`INetFwRule::get_LocalPorts`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_localports)
+/// and [`INetFwRule::get_RemotePorts`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_remoteports).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Port {
     /// "*" — any port

@@ -3,6 +3,8 @@ use std::{fmt, str::FromStr};
 use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Enum representing different types of network interfaces.
+///
+/// Corresponds to the values accepted by [`INetFwRule::get_InterfaceTypes`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-get_interfacetypes).
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InterfaceType {
     /// Wireless interface

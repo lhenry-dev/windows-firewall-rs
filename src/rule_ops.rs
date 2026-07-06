@@ -11,6 +11,8 @@ use crate::utils::{hashset_to_bstr, hashset_to_variant, with_policy};
 /// This function initializes COM, creates a firewall policy object, and checks if a rule
 /// with the specified name exists in the Windows Firewall rules list.
 ///
+/// See [`INetFwRules::Item`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-item).
+///
 /// # Arguments
 ///
 /// * `name` - A string slice representing the name of the firewall rule to check.
@@ -43,6 +45,8 @@ pub fn rule_exists(name: &str) -> Result<bool, WindowsFirewallError> {
 ///
 /// This function initializes COM, creates a firewall policy object, and attempts to retrieve
 /// the firewall rule with the given name. If successful, it returns the rule as a [`FirewallRule`].
+///
+/// See [`INetFwRules::Item`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-item).
 ///
 /// # Arguments
 ///
@@ -78,6 +82,8 @@ pub fn get_rule(name: &str) -> Result<FirewallRule, WindowsFirewallError> {
 ///
 /// This function initializes COM, retrieves the firewall policy object,
 /// and sets the enabled state of the specified firewall rule.
+///
+/// See [`INetFwRule::put_Enabled`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrule-put_enabled).
 ///
 /// # Arguments
 ///
@@ -121,6 +127,8 @@ pub fn enable_rule(rule_name: &str, enabled: bool) -> Result<(), WindowsFirewall
 /// This function initializes COM, creates a firewall policy object, and removes the firewall rule
 /// with the given name from the list of active rules.
 ///
+/// See [`INetFwRules::Remove`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-remove).
+///
 /// # Arguments
 ///
 /// * `rule_name` - A string slice representing the name of the firewall rule to remove.
@@ -156,6 +164,8 @@ pub fn remove_rule(rule_name: &str) -> Result<(), WindowsFirewallError> {
 /// This function initializes COM, creates a firewall policy object, and adds a new rule
 /// to the Windows Firewall. The provided rule is converted into an `INetFwRule` object
 /// and added to the existing rules list.
+///
+/// See [`INetFwRules::Add`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwrules-add).
 ///
 /// # Arguments
 ///

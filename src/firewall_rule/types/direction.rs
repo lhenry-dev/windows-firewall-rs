@@ -5,6 +5,8 @@ use windows::Win32::NetworkManagement::WindowsFirewall::{
 use crate::firewall_rule::types::InvalidRuleProperty;
 
 /// Represents the possible firewall rule directions in Windows
+///
+/// Mirrors the [`NET_FW_RULE_DIRECTION`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_rule_direction) enumeration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
     /// Incoming direction

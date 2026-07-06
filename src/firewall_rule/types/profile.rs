@@ -10,6 +10,9 @@ use crate::firewall_rule::types::InvalidRuleProperty;
 ///
 /// This enum includes both legacy (v1) and modern (v2) profile types.
 /// Prefer using the `V2` variants unless you're targeting legacy Windows versions (pre-Vista).
+///
+/// Mirrors the [`NET_FW_PROFILE_TYPE2`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_profile_type2)
+/// and legacy [`NET_FW_PROFILE_TYPE`](https://learn.microsoft.com/en-us/windows/win32/api/icftypes/ne-icftypes-net_fw_profile_type) enumerations.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Profile {
     /// Modern: Domain profile.

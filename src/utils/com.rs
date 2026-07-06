@@ -11,6 +11,8 @@ use crate::WindowsFirewallError;
 use crate::constants::DWCLSCONTEXT;
 use crate::constants::DWCOINIT;
 
+/// Initializes COM on the current thread via [`CoInitializeEx`](https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-coinitializeex),
+/// runs `f`, then uninitializes COM via [`CoUninitialize`](https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize).
 pub fn with_com_initialized<F, R>(f: F) -> Result<R, WindowsFirewallError>
 where
     F: FnOnce() -> Result<R, WindowsFirewallError>,
@@ -27,6 +29,9 @@ where
     f()
 }
 
+/// Creates the [`NetFwPolicy2`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwpolicy2)
+/// COM object via [`CoCreateInstance`](https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-cocreateinstance)
+/// and passes the resulting [`INetFwPolicy2`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwpolicy2) to `f`.
 pub fn with_policy<F, R>(f: F) -> Result<R, WindowsFirewallError>
 where
     F: FnOnce(INetFwPolicy2) -> Result<R, WindowsFirewallError>,
@@ -38,6 +43,9 @@ where
     })
 }
 
+/// Creates the [`NetFwRule`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrule)
+/// COM object via [`CoCreateInstance`](https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-cocreateinstance)
+/// and passes the resulting [`INetFwRule`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrule) to `f`.
 pub fn with_rule<F, R>(f: F) -> Result<R, WindowsFirewallError>
 where
     F: FnOnce(INetFwRule) -> Result<R, WindowsFirewallError>,
