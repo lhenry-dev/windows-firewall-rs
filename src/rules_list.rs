@@ -85,7 +85,7 @@ pub fn list_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
 
             if fetched.is_err() {
                 warn!("Error while fetching rules: {fetched:?}");
-                continue;
+                break;
             }
 
             if pceltfetch == 0 {
