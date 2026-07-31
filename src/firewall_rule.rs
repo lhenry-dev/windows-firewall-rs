@@ -18,6 +18,8 @@ pub mod operations;
 pub mod types;
 
 /// Represents a rule in the Windows Firewall.
+/// Rust-native version of `INetFwRule`, with appropriate types and semantics.
+/// [`INetFwRule`](https://learn.microsoft.com/windows/win32/api/netfw/nn-netfw-inetfwrule)
 ///
 /// # Mandatory Fields
 /// - [`name`](FirewallRule::name): The friendly name of the rule. *(Must not contain `|` or be `"all"`)*
@@ -319,6 +321,7 @@ impl FirewallRule {
 }
 
 /// Struct for updating Windows Firewall Rule
+/// [`INetFwRule`](https://learn.microsoft.com/windows/win32/api/netfw/nn-netfw-inetfwrule)
 ///
 /// # Example
 /// ```rust
