@@ -173,15 +173,6 @@ match list_rules() {
 - Windows 7 or later
 - Administrative privileges for certain operations
 
-## References
-
-This crate is a safe wrapper around the Windows Firewall with Advanced Security COM API:
-
-- [Windows Firewall with Advanced Security](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ics/windows-firewall-advanced-security-start-page)
-- [`INetFwPolicy2`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwpolicy2) interface (firewall policy, profiles, firewall state)
-- [`INetFwRule`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrule) interface (individual rule properties)
-- [`INetFwRules`](https://learn.microsoft.com/en-us/windows/win32/api/netfw/nn-netfw-inetfwrules) interface (rule collection)
-
 ## Support
 
 For issues and questions:
