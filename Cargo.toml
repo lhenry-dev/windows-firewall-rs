@@ -40,3 +40,4 @@ windows = { version = "0.62.0", features = [
 
 [dev-dependencies]
 ipconfig = "0.3.2"
+memory-stats = "1.2.0"
