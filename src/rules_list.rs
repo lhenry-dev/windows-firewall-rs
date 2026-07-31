@@ -1,9 +1,9 @@
 use scopeguard::guard;
-use std::mem::ManuallyDrop;
+use std::slice;
 use tracing::warn;
 use windows::Win32::NetworkManagement::WindowsFirewall::{INetFwRule, INetFwRules};
 use windows::Win32::System::Ole::IEnumVARIANT;
-use windows::Win32::System::Variant::VARIANT;
+use windows::Win32::System::Variant::{VARIANT, VariantClear};
 use windows::core::{BSTR, Interface};
 
 use crate::errors::WindowsFirewallError;
@@ -69,35 +69,39 @@ pub fn list_rules() -> Result<Vec<FirewallRule>, WindowsFirewallError> {
 
     with_policy(|fw_policy| {
         let fw_rules: INetFwRules = unsafe { fw_policy.Rules() }?;
-        let rules_count = unsafe { fw_rules.Count() }?;
 
         let enumerator = unsafe { fw_rules._NewEnum() }?.cast::<IEnumVARIANT>()?;
 
-        let mut variants: [VARIANT; 1] = Default::default();
-        let mut pceltfetch: u32 = 0;
+        loop {
+            let mut variant = VARIANT::default();
+            let mut pceltfetch: u32 = 0;
 
-        for _ in 0..rules_count {
-            let fetched = unsafe { enumerator.Next(&mut variants, &raw mut pceltfetch) };
+            let fetched =
+                unsafe { enumerator.Next(slice::from_mut(&mut variant), &raw mut pceltfetch) };
 
-            let (true, Some(variant)) = (fetched.is_ok(), variants.first()) else {
-                warn!("Error while fetching rules");
-                continue;
-            };
-
-            let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.clone() };
-
-            let _dispatch_cleanup = guard(dispatch.clone(), |mut d| {
-                unsafe { ManuallyDrop::drop(&mut d) };
+            let variant = guard(variant, |mut v| {
+                let _ = unsafe { VariantClear(&raw mut v) };
             });
 
-            let Some(dispatch) = dispatch.as_ref() else {
+            if fetched.is_err() {
+                warn!("Error while fetching rules: {fetched:?}");
+                continue;
+            }
+
+            if pceltfetch == 0 {
+                break;
+            }
+
+            let dispatch = unsafe { variant.Anonymous.Anonymous.Anonymous.pdispVal.as_ref() };
+
+            let Some(dispatch) = dispatch else {
                 warn!("Variant does not contain a dispatch pointer");
                 continue;
             };
 
             let fw_rule = dispatch.cast::<INetFwRule>()?;
 
-            match fw_rule.try_into() {
+            match FirewallRule::try_from(fw_rule) {
                 Ok(rule) => rules_list.push(rule),
                 Err(e) => {
                     let fw_rule = dispatch.cast::<INetFwRule>()?;
