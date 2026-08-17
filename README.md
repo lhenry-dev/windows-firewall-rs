@@ -3,7 +3,7 @@
 <h1>Windows Firewall</h1>
 
 [![Crates.io](https://img.shields.io/crates/v/windows_firewall)](https://crates.io/crates/windows_firewall)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/ci.yml?branch=main)](https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/ci.yml?branch=main)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/lhenry-dev/windows-firewall-rs/build.yml?branch=main)](https://github.com/lhenry-dev/windows-firewall-rs/actions/workflows/build.yml?branch=main)
 [![Dependency Status](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs/status.svg)](https://deps.rs/repo/github/lhenry-dev/windows-firewall-rs)
 [![Documentation](https://docs.rs/windows_firewall/badge.svg)](https://docs.rs/windows_firewall)
 [![License](https://img.shields.io/crates/l/windows_firewall)](https://crates.io/crates/windows_firewall)
